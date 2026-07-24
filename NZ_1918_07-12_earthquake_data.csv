@@ -1,2 +1,0 @@
-PublicID,UTCTime,Latitude,LatitudeUncertainty,Longitude,LongitudeUncertainty,Depth,DepthUncertainty,PreferredMag,MS,MS_Uncertainty,MS_StationCount,Mw,Mw_Uncertainty,Mw_StationCount,M,M_Uncertainty,M_StationCount
-2178098,1918-11-03T11:14:00Z,-47.0,0.0,165.0,0.0,50.0,0.0,Mw,6.4,nan,0,6.7,nan,0,6.8,nan,0

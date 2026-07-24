@@ -1,4 +1,0 @@
-PublicID,UTCTime,Latitude,LatitudeUncertainty,Longitude,LongitudeUncertainty,Depth,DepthUncertainty,PreferredMag,MS,MS_Uncertainty,MS_StationCount,M,M_Uncertainty,M_StationCount
-2178101,1921-07-20T15:57:00Z,-39.5,0.0,177.0,0.0,25.0,0.0,M,,,,5.5,nan,0
-2178102,1921-09-06T04:26:00Z,-38.0,0.0,178.0,0.0,25.0,0.0,MS,5.0,nan,0,6.0,nan,0
-2178103,1921-11-05T20:47:00Z,-44.0,0.0,173.0,0.0,25.0,0.0,M,,,,5.5,nan,0

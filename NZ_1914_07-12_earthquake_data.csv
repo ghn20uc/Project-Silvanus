@@ -1,4 +1,0 @@
-PublicID,UTCTime,Latitude,LatitudeUncertainty,Longitude,LongitudeUncertainty,Depth,DepthUncertainty,PreferredMag,MS,MS_Uncertainty,MS_StationCount,Mw,Mw_Uncertainty,Mw_StationCount
-2178093,1914-10-06T19:16:00Z,-37.8,0.0,178.2,0.0,12.0,0.0,Mw,6.7,nan,0,6.6,nan,0
-2178094,1914-10-28T00:16:00Z,-37.8,0.0,178.2,0.0,12.0,0.0,Mw,6.4,nan,0,6.4,nan,0
-2178095,1914-11-22T08:14:00Z,-37.5,0.0,176.5,0.0,300.0,0.0,Mw,6.5,nan,0,7.3,nan,0

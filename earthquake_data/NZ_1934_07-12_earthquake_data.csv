@@ -1,0 +1,5 @@
+PublicID,UTCTime,Latitude,LatitudeUncertainty,Longitude,LongitudeUncertainty,Depth,DepthUncertainty,PreferredMag,ML,ML_Uncertainty,ML_StationCount
+1584835,1934-08-08T00:05:00Z,-40.85,0.0,175.75,0.0,5.0,0.0,ML,3.9,nan,1
+1584834,1934-08-08T00:05:00Z,-40.5,0.0,176.4,0.0,12.0,0.0,ML,4.4,nan,1
+1584836,1934-08-08T20:27:00Z,-40.9,0.0,176.0,0.0,12.0,0.0,ML,4.6,nan,1
+1584837,1934-08-08T20:30:00Z,-40.9,0.0,175.8,0.0,12.0,0.0,ML,4.5,nan,1

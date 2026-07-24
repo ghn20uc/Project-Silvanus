@@ -1,0 +1,5 @@
+PublicID,UTCTime,Latitude,LatitudeUncertainty,Longitude,LongitudeUncertainty,Depth,DepthUncertainty,PreferredMag,MS,MS_Uncertainty,MS_StationCount,M,M_Uncertainty,M_StationCount
+2178264,1939-02-10T15:35:00Z,-45.0,0.0,167.0,0.0,25.0,0.0,M,,,,7.0,nan,0
+2178265,1939-02-23T23:21:00Z,-38.0,0.0,177.0,0.0,25.0,0.0,M,,,,5.5,nan,0
+2178266,1939-04-20T00:00:00Z,-46.5,0.0,167.5,0.0,25.0,0.0,MS,6.0,nan,0,6.0,nan,0
+2178267,1939-05-14T18:12:00Z,-36.5,0.0,179.0,0.0,80.0,0.0,M,,,,6.0,nan,0
