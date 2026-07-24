@@ -1,0 +1,3 @@
+PublicID,UTCTime,Latitude,LatitudeUncertainty,Longitude,LongitudeUncertainty,Depth,DepthUncertainty,PreferredMag,MS,MS_Uncertainty,MS_StationCount
+2178242,1932-03-05T01:40:54Z,-36.5,0.0,178.0,0.0,30.0,0.0,MS,6.0,nan,0
+2178243,1932-05-05T08:24:00Z,-39.59,0.1,177.47,0.2,12.0,0.0,MS,5.9,nan,0
