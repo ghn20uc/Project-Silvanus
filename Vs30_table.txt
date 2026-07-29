@@ -1,0 +1,394 @@
+         Lat          Lon     Vs30  sigma_meas. Location ID (if present)         Data source                  Qflag    Region (QMAP quadrant)
+  -43.291569   172.714373    220.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.304781   172.606226    225.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.307775   172.641398    185.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.300348   172.680375    160.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.309414   172.700931    199.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.307950   172.605912    227.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.312292   172.625507    200.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.312292   172.625507    200.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.316725   172.666176    151.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.312914   172.699869    200.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.312998   172.700026    213.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.329064   172.667753    180.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.329175   172.667762    170.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.334813   172.681705    184.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.328956   172.685334    217.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.355683   172.664438    209.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.351851   172.676969    214.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.357683   172.664722    209.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.372360   172.668385    257.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.370600   172.698434    196.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.370628   172.698693    194.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.375770   172.632733    259.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.380924   172.642402    205.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.379962   172.653476    208.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.378611   172.665096    223.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.380526   172.673111    237.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.376582   172.703006    172.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.382671   172.630709    210.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.387448   172.645153    206.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.384741   172.657056    198.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.385894   172.667663    210.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.386119   172.673357    206.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.386202   172.703096    190.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.393317   172.642431    181.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.394084   172.658973    203.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.393943   172.661192    201.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.399631   172.693299    187.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.397325   172.701158    191.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.403076   172.644162    175.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.403220   172.650239    208.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.404541   172.667903    202.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.406850   172.693864    202.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.402828   172.701121    191.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.414380   172.605116    207.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.411652   172.646954    173.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.411341   172.647971    169.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.413022   172.692756    206.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.423735   172.654082    201.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.425712   172.690262    202.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.434764   172.646424    175.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.430833   172.650331    202.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.435677   172.677851    196.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.430711   172.692751    192.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.430665   172.701470    194.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.444593   172.633898    165.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.437562   172.645679    180.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.437414   172.647138    182.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.441150   172.665996    194.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.435874   172.677987    196.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.434788   172.695304    185.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.450541   172.611360    171.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.448796   172.616995    166.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.449766   172.632835    137.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.447231   172.641276    194.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.451396   172.649906    176.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.445110   172.666674    211.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.461120   172.609337    196.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.457635   172.619786    180.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.458712   172.622252    169.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.454537   172.643244    169.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.457274   172.653340    224.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.459647   172.666192    208.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.470743   172.610908    188.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.469948   172.615909    180.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.464900   172.634530    164.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.466710   172.642996    153.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.464813   172.653682    212.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.467096   172.666883    203.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.471565   172.704101    197.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.479317   172.582265    193.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.479485   172.588231    180.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.477254   172.607364    196.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.476259   172.615172    167.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.474582   172.629785    200.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.476630   172.666125    206.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.473903   172.677766    204.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.476390   172.691768    182.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.476241   172.703515    180.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.476098   172.714195    210.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.483588   172.573714    199.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.484087   172.581364    209.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.483863   172.591510    185.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.480251   172.608208    174.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.488040   172.620745    160.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.483334   172.629670    174.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.483758   172.668089    203.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.484549   172.679649    192.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.488806   172.689554    180.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.485695   172.703360    193.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.487110   172.715646    207.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.493866   172.591093    176.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.494423   172.604164    163.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.491979   172.618748    176.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.497066   172.631161    184.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.498310   172.641899    175.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.494301   172.658665    212.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.491567   172.666230    224.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.497661   172.676950    186.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.494540   172.691189    188.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.493991   172.705307    185.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.494114   172.716603    199.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.490824   172.723562    205.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.502841   172.542524    205.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.507569   172.592543    217.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.503910   172.604849    190.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.502737   172.617001    175.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.502581   172.628048    175.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.502627   172.642838    181.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.503099   172.653774    179.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.500011   172.665404    198.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.503149   172.677544    179.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.503440   172.691969    168.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.502749   172.703751    197.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.503465   172.715921    185.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.509462   172.544074    225.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.513243   172.570869    196.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512282   172.582344    194.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.510770   172.591135    234.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.513671   172.607019    209.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512299   172.616471    175.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.514469   172.629037    181.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512260   172.641987    192.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512010   172.654476    193.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512082   172.666601    194.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512821   172.679782    174.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512523   172.690953    186.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512330   172.703655    190.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.511901   172.715789    175.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.512466   172.729638    194.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.521683   172.582225    205.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.522350   172.592162    209.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.520968   172.604272    201.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.521360   172.617582    212.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.521761   172.629069    178.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.520443   172.641148    178.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.520321   172.654760    184.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.520489   172.667666    166.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.520693   172.678448    193.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.521723   172.691230    192.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.519369   172.704435    192.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.519341   172.712252    186.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.525123   172.737221    199.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.531202   172.571207    167.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.526804   172.584422    177.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.530772   172.596040    183.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.529741   172.603723    162.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.526891   172.619776    194.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.530837   172.630526    169.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.530640   172.641358    182.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.528812   172.651313    202.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.533203   172.668980    180.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.530218   172.677526    184.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.531076   172.695263    183.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.532799   172.702454    184.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.526739   172.731564    202.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.533733   172.738682    180.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.544310   172.502597    245.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.539732   172.544332    216.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.540274   172.549363    204.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.538205   172.583544    202.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.539779   172.593979    181.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.539210   172.611196    173.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.540468   172.618031    157.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.538885   172.629265    183.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.538545   172.642594    174.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.539083   172.654352    153.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.539165   172.666188    173.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.539786   172.677662    191.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.538319   172.688858    190.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.538863   172.701906    178.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.544710   172.502096    244.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.544466   172.552265    182.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.551726   172.572329    224.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.548976   172.580660    183.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.549463   172.591456    160.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.552068   172.603459    177.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.549625   172.616235    150.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.548779   172.629726    172.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.548450   172.642613    165.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.548260   172.654477    170.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.548265   172.667514    194.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.547891   172.678229    197.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.549852   172.690971    177.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.548764   172.698491    184.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.559244   172.547771    183.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.557857   172.555100    178.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.553719   172.567072    200.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.557318   172.582573    185.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.556690   172.592343    179.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.557487   172.605942    177.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.558147   172.616553    170.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.557270   172.630816    192.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.556346   172.640706    164.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.557209   172.652871    181.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.556484   172.666067    173.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.557524   172.677637    196.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.555557   172.687854    185.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.557209   172.702696    198.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.569187   172.540750    181.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.565594   172.555699    184.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.564128   172.560824    181.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.570636   172.579476    189.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.567162   172.588930    162.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.565787   172.603614    155.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.566704   172.622022    174.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.565642   172.629798    240.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.567367   172.641221    156.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.563147   172.648662    198.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.562634   172.663265    164.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.561090   172.678734    192.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.564678   172.690342    164.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.561566   172.740235    174.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.579989   172.520947    232.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.573158   172.538106    193.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.575632   172.542913    201.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.576718   172.553217    190.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.574088   172.565172    177.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.574483   172.580007    169.2          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.575894   172.599417    221.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.575894   172.599417    221.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.573523   172.616989    153.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.573153   172.645489    233.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.573153   172.645489    233.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.570315   172.690379    244.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.572092   172.696642    249.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.583968   172.516068    258.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.581773   172.536044    201.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.581087   172.545080    180.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.586459   172.551582    188.0          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.583632   172.569888    199.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.580922   172.578194    175.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.592978   172.474138    245.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.593107   172.544130    185.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.593935   172.553133    192.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.593076   172.568394    172.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.597231   172.603649    166.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.605821   172.560937    209.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.605821   172.560937    209.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.597374   172.603350    169.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.606127   172.561332    193.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.632886   172.558665    195.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.642823   172.501234    193.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.640001   172.556507    187.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.635842   172.561250    196.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.644176   172.499884    191.5          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.644285   172.502127    191.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.647086   172.554949    171.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.660034   172.510553    190.7          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.660286   172.537576    192.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.658756   172.554126    173.8          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.668740   172.506471    196.1          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.661920   172.532629    199.9          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.664179   172.545009    194.3          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.663434   172.552655    189.4          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.674202   172.499947    195.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -43.674103   172.500205    178.6          0.2 NA                               McGann et al. (2017)         NA       Christchurch        
+  -39.499953   176.875497    150.0          0.2 014A                             Kaiser et al. (2017)         Q2       Hawkes Bay          
+  -38.666239   178.022714    138.0          0.2 017A                             Kaiser et al. (2017)         Q2       Raukumara           
+  -38.664039   178.024914    138.0          0.2 018A                             Kaiser et al. (2017)         Q2       Raukumara           
+  -39.584949   174.273465    210.0          0.2 025A                             Kaiser et al. (2017)         Q2       Taranaki            
+  -45.898396   170.509285    140.0          0.2 044A                             Kaiser et al. (2017)         Q2       Dunedin             
+  -39.033745   177.423506    155.0          0.2 096A                             Kaiser et al. (2017)         Q2       Hawkes Bay          
+  -41.297488   174.780964    245.0          0.2 132A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.234987   174.917066    350.0          0.2 249A                             Kaiser et al. (2017)         Q2       Wellington          
+  -39.933758   175.052973    250.0          0.2 302A                             Kaiser et al. (2017)         Q2       Taranaki            
+  -41.201086   174.954667    190.0          0.1 468A                             Kaiser et al. (2017)         Q1       Wellington          
+  -42.948319   171.566815    300.0          0.2 505A                             Kaiser et al. (2017)         Q2       Greymouth           
+  -41.224086   174.879366    200.0          0.2 608A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.234987   174.917166    350.0          0.1 642A                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.234087   174.917966    350.0          0.1 642E                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.257087   174.948166    120.0          0.1 646A                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.256287   174.947966    120.0          0.1 646B                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.287088   174.777964    473.6          0.2 647A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.287518   174.776944    473.6          0.2 647D                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.204686   174.923266    330.0          0.2 651A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.292088   174.778964    267.0          0.2 900B                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.277554   174.779258    275.2          0.2 902A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.278787   174.778464    250.0          0.2 907A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.288588   174.776864    358.0          0.2 911A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.326289   174.808464    239.0          0.2 912A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.294988   174.773464    282.0          0.2 914A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.294688   174.774064    270.0          0.2 914C                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.294088   174.775664    291.0          0.2 916A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.293588   174.776864    307.0          0.2 919A                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.292088   174.778964    272.0          0.2 941A                             Kaiser et al. (2017)         Q2       Wellington          
+  -42.948949   171.567735    300.0          0.2 APPS                             Kaiser et al. (2017)         Q2       Greymouth           
+  -43.483176   172.530015    435.0          0.1 CACS                             Kaiser et al. (2017)         Q1       Christchurch        
+  -43.529347   172.619876    197.0          0.1 CBGS                             Kaiser et al. (2017)         Q1       Christchurch        
+  -43.538085   172.647427    182.0          0.1 CCCC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -43.535929   172.627523    196.0          0.1 CHHC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -43.565618   172.624176    213.0          0.1 CMHS                             Kaiser et al. (2017)         Q1       Christchurch        
+  -43.574748   172.623226    900.0          0.2 CRLZ                             Kaiser et al. (2017)         Q2       Christchurch        
+  -45.905156   170.470645    500.0          0.2 DUNS                             Kaiser et al. (2017)         Q2       Dunedin             
+  -38.666489   178.022674    138.0          0.2 GISS                             Kaiser et al. (2017)         Q2       Raukumara           
+  -39.645846   176.842906    182.0          0.2 HCDS                             Kaiser et al. (2017)         Q2       Hawkes Bay          
+  -43.579787   172.709423    348.0          0.1 HVSC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -39.585139   174.274245    210.0          0.2 HWHS                             Kaiser et al. (2017)         Q2       Taranaki            
+  -38.083515   176.709290    220.0          0.2 KAFS                             Kaiser et al. (2017)         Q2       Rotorua             
+  -43.376463   172.663768    257.0          0.1 KPOC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -41.204980   174.926600    330.0          0.2 LNBS                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.314888   174.818435    200.0          0.1 MISS                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.202272   174.953755    190.0          0.1 NBSS                             Kaiser et al. (2017)         Q1       Wellington          
+  -43.495426   172.717998    204.0          0.1 NNBS                             Kaiser et al. (2017)         Q1       Christchurch        
+  -41.224506   174.879436    200.0          0.2 PGMS                             Kaiser et al. (2017)         Q2       Wellington          
+  -43.492846   172.606916    180.0          0.1 PPHS                             Kaiser et al. (2017)         Q1       Christchurch        
+  -41.249020   174.934133    190.0          0.2 PRKS                             Kaiser et al. (2017)         Q2       Wellington          
+  -43.525813   172.682771    196.0          0.1 PRPC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -41.224746   174.873917    190.0          0.2 PVCS                             Kaiser et al. (2017)         Q2       Wellington          
+  -43.521947   172.635146    155.0          0.1 REHS                             Kaiser et al. (2017)         Q1       Christchurch        
+  -43.536172   172.564404    286.0          0.1 RHSC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -41.296528   174.781154    246.0          0.1 RQGS                             Kaiser et al. (2017)         Q1       Wellington          
+  -43.505337   172.663391    201.0          0.1 SHLC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -45.898626   170.509715    140.0          0.2 SKFS                             Kaiser et al. (2017)         Q2       Dunedin             
+  -43.467529   172.613861    219.0          0.1 SMTC                             Kaiser et al. (2017)         Q1       Christchurch        
+  -41.290588   174.781064    266.7          0.1 TEPS                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.275427   174.783054    274.0          0.1 TFSS                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.279854   174.778399    250.0          0.2 VUWS                             Kaiser et al. (2017)         Q2       Wellington          
+  -41.257397   174.948466    120.0          0.1 WDAS                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.274287   174.779264    265.0          0.1 WEMS                             Kaiser et al. (2017)         Q1       Wellington          
+  -41.326409   174.809034    239.0          0.2 WNAS                             Kaiser et al. (2017)         Q2       Wellington          
+  -43.483165   172.530014    434.8          0.2 Canterbury Aero Club             Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.529339   172.619878    196.8          0.2 Christchurch Botanical Gardens   Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.538085   172.647427    177.0          0.2 Christchurch Cathedral College   Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.535926   172.627520    206.0          0.2 Christchurch Hospital            Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.565617   172.624169    204.8          0.2 Cashmere High School             Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.501571   172.702191    207.0          0.2 Hulverstone Dr Pumping Station   Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.579778   172.709423    352.2          0.2 Heathcote Valley School          Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.376460   172.663760    257.0          0.2 Kaiapoi North School             Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.495419   172.717997    211.7          0.2 North New Brighton School        Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.492842   172.606914    187.0          0.2 Papanui High School              Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.525803   172.682763    196.0          0.2 Pages Rd Pumping Station         Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.521945   172.635150    154.1          0.2 Christchurch Resthaven           Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.536172   172.564404    285.5          0.2 Riccarton High School            Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.505335   172.663394    210.1          0.2 Shirley Library                  Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.467529   172.613861    226.0          0.2 Styx Mill Transfer Station       Wotherspoon et al. (2013)    NA       Christchurch        
+  -43.541640   172.655080    288.4          0.2 AMI 2                            Cox et al. (2011)            NA       Christchurch        
+  -43.541630   172.655100    261.3          0.2 AMI 3                            Cox et al. (2011)            NA       Christchurch        
+  -43.542130   172.654680    201.0          0.2 AMI 4                            Cox et al. (2011)            NA       Christchurch        
+  -43.542730   172.653430    194.5          0.2 AMI 5                            Cox et al. (2011)            NA       Christchurch        
+  -43.542420   172.652620    197.3          0.2 AMI 6                            Cox et al. (2011)            NA       Christchurch        
+  -43.525170   172.725120    189.7          0.2 S New Brighton Bridge            Cox et al. (2011)            NA       Christchurch        
+  -43.506520   172.685830    205.2          0.2 SW AVD 02                        Cox et al. (2011)            NA       Christchurch        
+  -43.504250   172.665450    203.6          0.2 SW 6426                          Cox et al. (2011)            NA       Christchurch        
+  -43.379320   172.653480    217.5          0.2 SW KAS 40                        Cox et al. (2011)            NA       Christchurch        
+  -43.505170   172.659220    174.0          0.2 SW 6409 / SHY09                  Wood et al. (2017)           NA       Christchurch        
+  -43.508520   172.687020    180.1          0.2 SW AVD 07                        Wood et al. (2017)           NA       Christchurch        
+  -43.498150   172.700250    177.4          0.2 SW BUR 46                        Wood et al. (2017)           NA       Christchurch        
+  -43.524350   172.632650    187.5          0.2 SW CBD 21                        Wood et al. (2017)           NA       Christchurch        
+  -43.523930   172.612170    175.0          0.2 SW FND 01                        Wood et al. (2017)           NA       Christchurch        
+  -43.381320   172.666730    169.0          0.2 SW KAN 03                        Wood et al. (2017)           NA       Christchurch        
+  -43.383000   172.659130    205.0          0.2 SW KAN 05                        Wood et al. (2017)           NA       Christchurch        
+  -43.380570   172.668710    195.5          0.2 SW KAN 19                        Wood et al. (2017)           NA       Christchurch        
+  -43.380870   172.656880    197.0          0.2 SW KAN 26                        Wood et al. (2017)           NA       Christchurch        
+  -43.379350   172.648380    206.2          0.2 SW KAS 20                        Wood et al. (2017)           NA       Christchurch        
+  -43.528330   172.635320    176.0          0.2 SW Z2-4                          Wood et al. (2017)           NA       Christchurch        
+  -43.527630   172.636970    181.4          0.2 SW Z2-6                          Wood et al. (2017)           NA       Christchurch        
+  -43.528750   172.642270    191.7          0.2 SW Z4-4                          Wood et al. (2017)           NA       Christchurch        
+  -43.574740   172.623220    900.0          0.2 CRLZ                             van Houtte et al. (2014)     NA       Christchurch        
+  -43.632534   172.624664    733.0          0.2 D14C                             van Houtte et al. (2014)     NA       Christchurch        
+  -43.578401   172.770733    586.0          0.2 GODS                             van Houtte et al. (2014)     NA       Christchurch        
+  -43.584671   172.725601    830.0          0.2 MTPS                             van Houtte et al. (2014)     NA       Christchurch        
+  -43.489324   172.101112    518.0          0.2 DFHS                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.586840   172.089292    457.0          0.2 GDLC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.538339   171.959848    531.0          0.2 HORC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.592773   172.382406    447.0          0.2 ROLC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.675208   172.318451    327.0          0.2 SLRC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.550297   172.472808    398.0          0.2 TPLC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.622602   172.468765    292.0          0.2 LINC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.370714   172.495167    546.0          0.2 SWNC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.750892   172.022959    452.0          0.2 RKAC                             Wotherspoon et al. (2016)    NA       Christchurch        
+  -43.505591   172.565624    294.0          0.2 Burnside Park                    Cox et al. (2016)            NA       Christchurch        
+  -43.566681   172.623209    222.0          0.2 Cashmere High                    Cox et al. (2016)            NA       Christchurch        
+  -43.501391   172.647934    160.0          0.2 Christchurch Park                Cox et al. (2016)            NA       Christchurch        
+  -43.524599   172.648853    211.0          0.2 Fitzgerald                       Cox et al. (2016)            NA       Christchurch        
+  -43.546876   172.674017    183.0          0.2 Garrick Park                     Cox et al. (2016)            NA       Christchurch        
+  -43.441365   172.620876    223.0          0.2 Groynes                          Cox et al. (2016)            NA       Christchurch        
+  -43.536962   172.616054    188.0          0.2 Hagley Park                      Cox et al. (2016)            NA       Christchurch        
+  -43.522690   172.575867    297.0          0.2 Ilam Fields                      Cox et al. (2016)            NA       Christchurch        
+  -43.530570   172.642643    192.0          0.2 Latimer Square                   Cox et al. (2016)            NA       Christchurch        
+  -43.515499   172.685487    186.0          0.2 Porritt Park                     Cox et al. (2016)            NA       Christchurch        
+  -43.492047   172.709090    202.0          0.2 QEII Park                        Cox et al. (2016)            NA       Christchurch        
+  -43.476662   172.613207    188.0          0.2 Redwood Park                     Cox et al. (2016)            NA       Christchurch        
+  -43.534568   172.565783    324.0          0.2 Riccarton High Fields            Cox et al. (2016)            NA       Christchurch        

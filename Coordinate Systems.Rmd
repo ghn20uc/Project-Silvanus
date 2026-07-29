@@ -53,25 +53,88 @@ NZMG (NZ Map Grid)	27200	Obsolete but still seen in older datasets
 If you're working with historical maps or older government data, you may need to convert these to NZGD2000 or NZTM2000.
 
 
-
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
+## Vs30_tables is in WGS84 from the vspr_write.R file
 
 
 ```{r}
-library(sF)
+library(sf)
+library(tidyverse)
+library(tibble)
 ```
 
 
-# Check the Coordinate Reference System
 ```{r}
+# Read the text file
+lines <- readLines("Vs30_table.txt")
+lines <- lines[-1]
 
-data <- st_read("your_file.shp")
+vs30 <- tibble(text = lines)
 
-st_crs(data)
+head(vs30)
+```
+
+```{r}
+data <- vs30 |>
+  rename(
+    sort = 1
+  ) |>
+  separate(
+    sort, into  = c("space", "Lat", "Lon", "Vs30", "sigma_meas_Location_ID", "Data_Source", "Qflag", "Region(QMAP_quadrant)"), sep = "\\s{2,}", extra = "merge", fill = "right"
+  ) |>
+  extract(
+    sigma_meas_Location_ID, into = c("sigma_meas","Location_ID"), regex = "^(\\S+)\\s+(.*)$"
+  ) |>
+  select(
+    -space
+  )
 
 ```
 
+```{r}
+vs30_nzgd2000 <- data |>
+  mutate(
+    Lat = as.numeric(Lat),
+    Lon = as.numeric(Lon)
+  ) |>
+  filter(!is.na(Lat), !is.na(Lon)) |>
+  st_as_sf(
+    coords = c("Lon", "Lat"),
+    crs = 4326,
+    remove = FALSE
+  ) |>
+  st_transform(crs = 4167)
+```
+```{r}
+nzgd_coords <- st_coordinates(vs30_nzgd2000)
+
+vs30_nzgd2000 <- vs30_nzgd2000 |>
+  mutate(
+    NZGD2000_Lon = nzgd_coords[, "X"],
+    NZGD2000_Lat = nzgd_coords[, "Y"]
+  )
+```
+
+```{r}
+st_write(
+  vs30_nzgd2000,
+  "Vs30_NZGD2000.gpkg",
+  delete_dsn = TRUE
+)
+```
+
+```{r}
+write.csv(
+  st_drop_geometry(vs30_nzgd2000),
+  "Vs30_NZGD2000.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+vs30_check <- st_read("Vs30_NZGD2000.gpkg")
+
+st_crs(vs30_check)
+head(vs30_check)
+
+all(st_is_valid(vs30_check))
+```
