@@ -1,0 +1,77 @@
+---
+title: "Coordinate Systems"
+author: "Ben Pearce"
+date: "2026-07-29"
+output: pdf_document
+---
+
+
+
+1. NZGD2000 (Most common)
+
+This is the official geodetic datum for New Zealand and is used by:
+
+LINZ
+GeoNet
+Stats NZ
+Most government GIS datasets
+
+It defines the latitude and longitude system for New Zealand.
+
+Geographic coordinates
+Datum: NZGD2000
+CRS: EPSG:4167
+
+
+2. NZTM2000 (Most common projected CRS)
+
+New Zealand Transverse Mercator 2000 (NZTM2000) is the standard projected coordinate system.
+
+EPSG: 2193
+
+Instead of latitude/longitude, coordinates are measured in metres.
+
+
+3. WGS84 (GPS)
+EPSG: 4326
+
+This is the global coordinate system used by:
+
+GPS
+Google Maps
+OpenStreetMap
+Most web maps
+
+4. Historical coordinate systems
+
+Older datasets may use:
+
+CRS	EPSG	Status
+NZGD1949	4272	Old datum
+NZMG (NZ Map Grid)	27200	Obsolete but still seen in older datasets
+
+If you're working with historical maps or older government data, you may need to convert these to NZGD2000 or NZTM2000.
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(sF)
+```
+
+
+# Check the Coordinate Reference System
+```{r}
+
+data <- st_read("your_file.shp")
+
+st_crs(data)
+
+```
+
