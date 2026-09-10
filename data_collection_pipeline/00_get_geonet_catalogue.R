@@ -16,7 +16,7 @@ output_dir <- file.path(
   "geonet_catalogue"
 )
 
-minimum_magnitude <- 5.0
+minimum_magnitude <- 3.0
 
 # Set the bounding box region
 bbox <- "163.5205,-49.1817,-176.9238,-32.2871"
@@ -32,7 +32,7 @@ dir.create(
 # Monthly dates
 
 months <- seq(
-  as.Date("2001-01-01"),
+  as.Date("2016-11-01"),
   floor_date(Sys.Date(), "month"),
   by = "month"
 )
