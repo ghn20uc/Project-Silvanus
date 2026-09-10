@@ -1,0 +1,727 @@
+---
+title: "DataExploration"
+author: "Ben Pearce"
+date: "2026-08-06"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(arrow)
+library(tidyverse)
+library(zip)
+library(sf)
+library(ggplot2)
+library(dplyr)
+```
+
+## removing unneeded parts of the dataset
+```{r}
+data <- read_parquet("data_processed/NZ_FR_IAR_final_dataset.parquet")
+
+data <- data |>
+  select(
+    -aggregation,
+    -geohash,
+    -Mw_source,
+    -fault_style_source,
+    -mt_quality_flag,
+    -M_model_source,
+    -tectonic_region,
+    -felt_query_exclusion_reason,
+    -felt_query_message,
+    -exclusion_reason,
+    -feature_index,
+    -geometry_type,
+    -eventtype,
+    -modificationtime,
+    -depthtype,
+    -magnitudetype,
+    -evaluationmethod,
+    -evaluationstatus,
+    -evaluationmode,
+    -earthmodel,
+    -usedphasecount,
+    -usedstationcount,
+    -magnitudestationcount,
+    -source_mtime,
+    -felt_query_status,
+    -felt_query_http_status,
+    -felt_api_feature_count,
+    -felt_observation_count,
+    -felt_query_attempts,
+    -felt_aggregation,
+    -felt_aggregation,
+    -felt_queried_at_utc,
+    -felt_cell_count,
+    -felt_cells_with_mmi,
+    -felt_mmi_min,
+    -felt_mmi_max,
+    -felt_mmi_weighted_median,
+    -felt_mmi_weighted_mean,
+    -has_felt_rapid,
+    -has_moment_tensor,
+    -mt_solution_time,
+    -mt_station_count,
+    -mt_double_couple_percent,
+    -mt_non_double_couple_percent_derived,
+    -mt_variance_reduction_percent,
+    -mt_strike1,
+    -mt_strike2,
+    -mt_rake1,
+    -mt_rake2,
+    -mt_dip1,
+    -mt_dip2,
+    -mt_fault_style_np1,
+    -mt_fault_style_np2,
+    -mt_fault_style_consensus,
+    -mt_method_id,
+    -fault_style,
+    -after_start_date,
+    -before_end_date,
+    -magnitude_eligible,
+    -felt_eligible,
+    -strong_query_eligible,
+    -strong_query_exclusion_reason,
+    -strong_query_status,
+    -strong_queried_at_utc,
+    -strong_station_count,
+    -strong_station_record_count,
+    -strong_distance_min_km,
+    -strong_distance_max_km,
+    -strong_mmi_max,
+    -strong_mmi_median,
+    -strong_pgv_h_max_cm_s,
+    -strong_pga_v_max_percent_g,
+    -strong_pga_h_max_percent_g,
+    -has_strong_motion,
+    -M_model,
+    -M_model_is_Mw,
+    -valid_report_coordinates,
+    -valid_event_coordinates,
+    -valid_event_depth,
+    -R_model_type,
+    -R_model_km,
+    -valid_mmi,
+    -valid_report_count,
+    -within_analysis_period,
+    -within_distance_control,
+    -meets_magnitude_control,
+    -matched_to_event,
+    -model_row_eligible,
+    -valid_site_coordinates,
+    -Mw_model,
+    -query_magnitude,
+    -strong_pgv_v_max_cm_s,
+    -mt_scalar_moment_dyne_cm,
+    -Vs30_raw,
+    -Vs30_m_s,
+    -vs30_plausible,
+    -vs30_raster_cell,
+    -vs30_cell_x,
+    -vs30_cell_y,
+    -vs30_source_distance_m,
+    -vs30_extraction_source,
+    -vs30_nearest_fill_used,
+    -vs30_status,
+    -has_vs30,
+    -ln_Vs30,
+    -ln_Vs30_over_760,
+    -site_class_broad,
+    -site_class_vs30_proxy,
+    -site_model_eligible,
+    -felt_query_eligible
+  )
+  
+
+
+data |>
+  count(reported_mmi)
+```
+
+```{r}
+data <- data |>
+  filter(!is.na(reported_mmi)) |>
+  rename(
+    felt_median = felt_mmi_median_cells
+  )
+
+mmi_counts <- data |>
+  select(
+    felt_mmi_1_reports,
+    felt_mmi_2_reports,
+    felt_mmi_3_reports,
+    felt_mmi_4_reports,
+    felt_mmi_5_reports,
+    felt_mmi_6_reports,
+    felt_mmi_7_reports,
+    felt_mmi_8_reports
+  ) |>
+  as.matrix()
+
+data <- data |>
+  mutate(
+    felt_mean =
+      rowSums(mmi_counts * 1:8, na.rm = TRUE) /
+      rowSums(mmi_counts, na.rm = TRUE),
+    felt_mode = max.col(mmi_counts, ties.method = "first")
+  ) |>
+  filter(!is.na(mt_Mw))
+```
+
+## checking the vs30 data
+```{r}
+vs30_data <- read_parquet("data_processed/vs30_site_lookup.parquet")
+```
+
+## mapping NZ
+```{r}
+unzip("statsnz-regional-council-2025-clipped-GPKG.zip", exdir = "nzmap")
+```
+
+```{r}
+nzmap <- st_read("nzmap/regional-council-2025-clipped.gpkg")
+```
+
+
+```{r}
+# Clean NZ map
+nz_clean <- nzmap |>
+  filter(REGC2025_V1_00_NAME != "Area Outside Region") |>
+  st_make_valid()
+
+# Combine NZ polygons and separate into individual polygons
+nz_parts <- nz_clean |>
+  summarise() |>
+  st_geometry() |>
+  st_cast("POLYGON")
+
+# Find the two largest polygons = North Island + South Island
+areas <- st_area(nz_parts)
+
+mainland_parts <- nz_parts[
+  order(areas, decreasing = TRUE)[1:2]
+]
+
+# Combine North + South Islands
+nz_mainland <- st_sf(
+  geometry = st_union(mainland_parts),
+  crs = st_crs(nzmap)
+)
+
+# Prepare Vs30 data
+vs30_heat <- vs30_data |>
+  filter(
+    !is.na(Vs30_raw),
+    is.finite(Vs30_raw),
+    !is.na(vs30_cell_x),
+    !is.na(vs30_cell_y)
+  ) |>
+  distinct(
+    vs30_cell_x,
+    vs30_cell_y,
+    .keep_all = TRUE
+  )
+
+# Vs30 coordinates are originally longitude/latitude (WGS84)
+vs30_heat_sf <- st_as_sf(
+  vs30_heat,
+  coords = c("vs30_cell_x", "vs30_cell_y"),
+  crs = 4326,
+  remove = FALSE
+)
+
+# Convert Vs30 points to the same NZGD2000 CRS as nzmap
+vs30_heat_sf <- st_transform(
+  vs30_heat_sf,
+  st_crs(nzmap)
+)
+
+# Keep only Vs30 points within North + South Islands
+vs30_heat_sf <- st_filter(
+  vs30_heat_sf,
+  nz_mainland,
+  .predicate = st_within
+)
+
+# Get the transformed coordinates
+coords <- st_coordinates(vs30_heat_sf)
+
+vs30_heat_plot <- vs30_heat_sf |>
+  st_drop_geometry() |>
+  mutate(
+    x = coords[, 1],
+    y = coords[, 2]
+  )
+
+```
+
+
+```{r}
+vs30_map <- ggplot() +
+  geom_tile(
+    data = vs30_heat_plot,
+    aes(
+      x = x,
+      y = y,
+      fill = Vs30_raw
+    ),
+    width = 10000,
+    height = 10000
+  ) +
+  geom_sf(
+    data = nz_mainland,
+    fill = NA,
+    colour = "black",
+    linewidth = 0.4
+  ) +
+  scale_fill_viridis_c(
+    name = "Vs30 (m/s)",
+    direction = -1
+  ) +
+  coord_sf(
+    crs = st_crs(nzmap),
+    default_crs = st_crs(nzmap),
+    expand = FALSE
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Vs30 across New Zealand",
+    x = NULL,
+    y = NULL
+  )
+
+vs30_map
+
+ggsave(
+  "vs30_map.png",
+  plot = vs30_map,
+  width = 20,
+  height = 25,
+  units = "cm",
+  dpi = 300
+)
+```
+
+
+```{r}
+data_sf <- data |>
+  st_as_sf(
+    coords = c("report_longitude", "report_latitude"),
+    crs = 4326
+  ) |>
+  st_transform(st_crs(nz_mainland)) |>
+  st_filter(nz_mainland)
+
+ggplot() + geom_sf(data = nz_mainland) + geom_sf(data = data_sf)
+```
+```{r}
+ggplot(data_sf, aes(y = reported_mmi)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    y = "Reported MMI",
+    title = "Distribution of Reported MMI"
+  )
+
+```
+
+```{r}
+ggplot(data_sf, aes(y = event_depth_km)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    y = "depth (Km)",
+    title = "Distribution of depth (Km)"
+  )
+
+```
+
+```{r}
+mmi_summary <- data_sf |>
+  st_drop_geometry() |>
+  summarise(
+    across(
+      c(
+        felt_mmi_1_reports,
+        felt_mmi_2_reports,
+        felt_mmi_3_reports,
+        felt_mmi_4_reports,
+        felt_mmi_5_reports,
+        felt_mmi_6_reports,
+        felt_mmi_7_reports,
+        felt_mmi_8_reports
+      ),
+      ~ sum(.x, na.rm = TRUE)
+    )
+  ) |>
+  pivot_longer(
+    everything(),
+    names_to = "mmi",
+    values_to = "reports"
+  ) |>
+  mutate(
+    mmi = str_extract(mmi, "\\d+")
+  )
+
+ggplot(mmi_summary, aes(x = mmi, y = reports)) +
+  geom_col() +
+  theme_minimal() +
+  labs(
+    x = "MMI",
+    y = "Number of Reports",
+    title = "Felt Reports by MMI"
+  ) 
+```
+```{r}
+data_sf |>
+  st_drop_geometry() |>
+  summarise(
+    across(everything(), ~ sum(is.na(.x)))
+  ) |>
+  pivot_longer(
+    everything(),
+    names_to = "column",
+    values_to = "na_count"
+  ) |>
+  filter(na_count > 0)
+```
+
+
+```{r}
+ggplot(data_sf, aes(x = felt_median, y = reported_mmi)) +
+  geom_point() +
+  theme_minimal() +
+  labs(
+    x = "felt MMI (Median)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Felt MMI (Median)"
+  )
+
+ggplot(data_sf, aes(x = felt_mean, y = reported_mmi)) +
+  geom_point() +
+  theme_minimal() +
+  labs(
+    x = "felt MMI (Mean)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Felt MMI (Mean)"
+  )
+
+ggplot(data_sf, aes(x = felt_mode, y = reported_mmi)) +
+  geom_point() +
+  theme_minimal() +
+  labs(
+    x = "felt MMI (Mode)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Felt MMI (Mode)"
+  )
+```
+
+```{r}
+ggplot(data_sf, aes(x = felt_median, y = reported_mmi)) +
+  geom_count() +
+  theme_minimal() +
+  labs(
+    x = "felt MMI (Median)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Felt MMI (Median)"
+  )
+
+ggplot(data_sf, aes(x = felt_mean, y = reported_mmi)) +
+  geom_count() +
+  theme_minimal() +
+  labs(
+    x = "felt MMI (Mean)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Felt MMI (Mean)"
+  )
+
+ggplot(data_sf, aes(x = felt_mode, y = reported_mmi)) +
+  geom_count() +
+  theme_minimal() +
+  labs(
+    x = "felt MMI (Mode)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Felt MMI (Mode)"
+  )
+```
+```{r}
+ggplot(data_sf, aes(x = Rhypo_km, y = reported_mmi)) +
+  geom_point() +
+  theme_minimal() +
+  labs(
+    x = "Hypocentral Distance (Km)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Hypocentral Distance"
+  )
+
+
+ggplot(data_sf, aes(x = Rhypo_km, y = reported_mmi)) +
+  geom_count() +
+  theme_minimal() +
+  labs(
+    x = "Hypocentral Distance (Km)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Hypocentral Distance"
+  )
+```
+
+```{r}
+ggplot(data_sf, aes(x = Rhypo_km, y = reported_mmi)) +
+  geom_jitter(
+    height = 0.15,
+    width = 0,
+    alpha = 0.05
+  ) +
+  theme_minimal() +
+  labs(
+    x = "Hypocentral Distance (km)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Hypocentral Distance"
+  )
+```
+```{r}
+mmi_distance_plot <- ggplot(
+  data_sf,
+  aes(x = Rhypo_km, y = reported_mmi)
+) +
+  geom_jitter(
+    height = 0.12,
+    width = 0,
+    alpha = 0.08,
+    size = 0.8
+  ) +
+  facet_wrap(
+    ~ mt_Mw,
+    ncol = 4
+  ) +
+  scale_y_continuous(
+    breaks = 1:8
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 10),
+    axis.text = element_text(size = 9),
+    axis.title = element_text(size = 11)
+  ) +
+  labs(
+    x = "Hypocentral Distance (km)",
+    y = "Reported MMI",
+    title = "Reported MMI vs Hypocentral Distance by Mw"
+  )
+
+mmi_distance_plot
+
+ggsave(
+  "mmi_distance_by_mw.png",
+  plot = mmi_distance_plot,
+  width = 60,
+  height = 60,
+  units = "cm",
+  dpi = 300
+)
+```
+
+```{r}
+dir.create("mmi_plots", showWarnings = FALSE)
+
+data_sf |>
+  filter(!is.na(mt_Mw)) |>
+  group_split(mt_Mw) |>
+  purrr::walk(function(df) {
+
+    mw <- unique(df$mt_Mw)
+
+    p <- ggplot(df, aes(x = Rhypo_km, y = reported_mmi)) +
+      geom_jitter(
+        height = 0.12,
+        width = 0,
+        alpha = 0.1
+      ) +
+      scale_x_continuous(limits = c(0, 2000)) +
+      scale_y_continuous(
+        breaks = 1:8,
+        limits = c(1, 8)
+      ) +
+      theme_minimal() +
+      labs(
+        x = "Hypocentral Distance (km)",
+        y = "Reported MMI",
+        title = paste("Reported MMI vs Hypocentral Distance — Mw", mw)
+      )
+
+    ggsave(
+      filename = paste0("mmi_plots/Mw_", mw, ".png"),
+      plot = p,
+      width = 18,
+      height = 12,
+      units = "cm",
+      dpi = 300
+    )
+  })
+```
+
+```{r}
+ggplot(data, aes(x = event_depth_km)) +
+  geom_histogram(
+    binwidth = 5,
+    colour = "black",
+    fill = "steelblue"
+  ) +
+  theme_minimal() +
+  labs(
+    x = "Earthquake Depth (km)",
+    y = "Number of Earthquakes",
+    title = "Distribution of Earthquake Depths"
+  )
+```
+
+
+```{r}
+data_sf |>
+  st_drop_geometry() |>
+  distinct(publicid, mt_Mw) |>
+  count(mt_Mw)
+```
+
+
+```{r}
+data |>
+  select(felt_mean, felt_median, felt_mode) |>
+  pivot_longer(
+    everything(),
+    names_to = "measure",
+    values_to = "MMI"
+  ) |>
+  ggplot(aes(x = measure, y = MMI)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    x = "Measure of Central Tendency",
+    y = "MMI",
+    title = "Comparison of Felt MMI Central Tendency Measures"
+  )
+```
+
+```{r}
+felt_per_earthquake <- data |>
+  group_by(publicid) |>
+  summarise(
+    felt_reports = sum(
+      felt_mmi_1_reports,
+      felt_mmi_2_reports,
+      felt_mmi_3_reports,
+      felt_mmi_4_reports,
+      felt_mmi_5_reports,
+      felt_mmi_6_reports,
+      felt_mmi_7_reports,
+      felt_mmi_8_reports,
+      na.rm = TRUE
+    )
+  )
+
+ggplot(
+  felt_per_earthquake,
+  aes(x = reorder(publicid, felt_reports), y = felt_reports)
+) +
+  geom_col() +
+  theme_minimal() +
+  labs(
+    x = "Earthquake",
+    y = "Number of Felt Reports",
+    title = "Felt Reports for Each Earthquake"
+  ) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+```
+```{r}
+felt_per_earthquake |>
+  slice_max(felt_reports, n = 30) |>
+  ggplot(
+    aes(x = reorder(publicid, felt_reports), y = felt_reports)
+  ) +
+  geom_col() +
+  theme_minimal() +
+  labs(
+    x = "Earthquake",
+    y = "Number of Felt Reports",
+    title = "Top 30 Earthquakes by Number of Felt Reports"
+  ) +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
+```{r}
+data_sf |>
+  distinct(publicid, felt_report_count) |>
+  ggplot(aes(x = felt_report_count)) +
+  geom_histogram(binwidth = 1000) +
+  theme_minimal() +
+  labs(
+    x = "Total Felt Reports",
+    y = "Number of Earthquakes",
+    title = "Distribution of Felt Reports per Earthquake"
+  )
+
+```
+```{r}
+data_sf |>
+  distinct(publicid, felt_report_count) |>
+  filter(
+    felt_report_count >= 0,
+    felt_report_count <= 30
+  ) |>
+  ggplot(aes(x = felt_report_count)) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = 0:30) +
+  theme_minimal() +
+  labs(
+    x = "Total Felt Reports",
+    y = "Number of Earthquakes",
+    title = "Earthquakes with 0–30 Felt Reports"
+  )
+```
+
+```{r}
+data_sf |>
+  distinct(publicid, felt_report_count) |>
+  filter(
+    felt_report_count >= 0,
+    felt_report_count <= 1000
+  ) |>
+  ggplot(aes(x = felt_report_count)) +
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = 0:1000) +
+  theme_minimal() +
+  labs(
+    x = "Total Felt Reports",
+    y = "Number of Earthquakes",
+    title = "Earthquakes with 0–30 Felt Reports"
+  )
+```
+
+```{r}
+coords <- sf::st_coordinates(data_sf)
+
+data_export <- data_sf |>
+  mutate(
+    longitude = coords[, 1],
+    latitude = coords[, 2]
+  ) |>
+  sf::st_drop_geometry()
+
+arrow::write_parquet(
+  data_export,
+  "data.parquet"
+)
+```

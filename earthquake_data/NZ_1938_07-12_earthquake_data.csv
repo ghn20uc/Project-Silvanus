@@ -1,6 +1,0 @@
-PublicID,UTCTime,Latitude,LatitudeUncertainty,Longitude,LongitudeUncertainty,Depth,DepthUncertainty,PreferredMag,MS,MS_Uncertainty,MS_StationCount,Mw,Mw_Uncertainty,Mw_StationCount,M,M_Uncertainty,M_StationCount
-2178259,1938-10-30T12:45:23Z,-38.5,0.0,176.5,0.0,150.0,0.0,M,,,,,,,5.0,nan,0
-2178260,1938-11-01T23:21:20Z,-38.5,0.0,176.5,0.0,150.0,0.0,M,,,,,,,5.0,nan,0
-2178261,1938-12-15T09:12:00Z,-40.08,0.0,176.55,0.0,25.0,0.0,MS,5.6,nan,0,,,,,,
-2178262,1938-12-16T17:21:25Z,-45.0,0.0,167.0,0.0,60.0,0.0,Mw,7.0,nan,0,6.9,nan,0,7.0,nan,0
-2178263,1938-12-30T02:20:00Z,-40.0,0.0,176.0,0.0,100.0,0.0,M,,,,,,,6.0,nan,0
