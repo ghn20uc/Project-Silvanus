@@ -119,7 +119,6 @@ data <- data |>
     -query_magnitude,
     -strong_pgv_v_max_cm_s,
     -mt_scalar_moment_dyne_cm,
-    -Vs30_raw,
     -Vs30_m_s,
     -vs30_plausible,
     -vs30_raster_cell,

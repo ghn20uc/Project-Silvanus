@@ -31,22 +31,10 @@ data_sf <- data |>
     remove = FALSE
   )
 
-vs30_data <- read_parquet("data_processed/vs30_site_lookup.parquet")
 
-vs30_sf <- vs30_data |>
-  st_as_sf(
-    coords = c("report_longitude", "report_latitude"),
-    crs = 4326,
-    remove = FALSE
-  ) |>
-  filter(!is.na(Vs30_raw))
-
-nearest_id <- st_nearest_feature(data_sf, vs30_sf)
-
+# filters the dataset to the decided upon report count
 data_sf <- data_sf |>
-  mutate(
-    Vs30_raw = vs30_sf$Vs30_raw[nearest_id]
-  )
+  filter(report_count >= 4)
 ```
 # Box-Cox Transformation
 
@@ -61,6 +49,8 @@ best_lambda <- bc$x[which.max(bc$y)]
 
 best_lambda
 ```
+
+
 # Box-Cox Model
 
 Applies the selected Box-Cox transformation using lambda = -1.3 and fits a linear model using `felt_median` as the predictor.
@@ -76,95 +66,57 @@ model_bc <- lm(mmi_bc_1.3 ~ felt_median, data = data_sf)
 plot(model_bc)
 summary(model_bc)
 ```
-# Filtering Felt Reports
-
-Filters the dataset to observations with at least five reports and repeats the Box-Cox analysis to determine the most suitable transformation for the filtered data.
-
-```{r}
-data_sf_5 <- data_sf |>
-  filter(report_count >= 5)
-
-
-bc <- boxcox(
-  lm(reported_mmi ~ felt_median, data = data_sf_5)
-)
-
-best_lambda <- bc$x[which.max(bc$y)]
-
-best_lambda
-
-```
-# Log-Transformed Model
-
-Fits a linear model using the log transformation suggested by the Box-Cox analysis for observations with at least five reports.
-
-```{r}
-
-model_bc_5 <- lm(log(reported_mmi) ~ felt_median, data = data_sf_5)
-
-plot(model_bc_5)
-summary(model_bc_5)
-```
 # Best Subset Selection — Full Dataset
 
-Uses best subset selection to compare combinations of earthquake depth, hypocentral distance, felt median, and Vs30 for predicting the Box-Cox transformed MMI.
+Uses best subset selection to compare combinations of earthquake depth, hypocentral distance, felt median, moment magnitude and Vs30 for predicting the Box-Cox transformed MMI.
 
 
 ```{r}
-best <- regsubsets(
-  mmi_bc_1.3 ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw,
+model_lr_rss <- regsubsets(
+  reported_mmi ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw + mt_Mw,
   data = data_sf,
-  nvmax = 4
+  nvmax = 5
 )
 
-summary(best)
-
-plot(best)
-
-summary(best)$bic
+summary(model_lr_rss)
+plot(model_lr_rss)
+summary(model_lr_rss)$bic
 ```
+
+# Filtering Felt Reports
+
+With the selected variables applies a Box-Cox analysis to determine the most suitable transformation for the filtered data.
+
+```{r}
+model_lr_bc <- boxcox(
+  lm(reported_mmi ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw + mt_Mw, data = data_sf)
+)
+
+best_lambda <- model_lr_bc$x[which.max(model_lr_bc$y)]
+best_lambda
+```
+
+
+
 # Selected Linear Model — Full Dataset
 
-Fits the model selected from the best subset analysis and checks its model summary and diagnostic plots.
+Fits the model selected from the best subset analysis and boxcox transformations and checks its model summary and diagnostic plots.
+Note: A value of -1 was used instead of -1.272727 for simplicity, as both transformations produced very similar diagnostic plots and model results.
 
 ```{r}
-best_lm_1.3 <- lm(mmi_bc_1.3 ~ event_depth_km + Rhypo_km + felt_median,
-  data = data_sf
-)
+data_sf <- data_sf |>
+  mutate(
+    mmi_bc_neg1 = (reported_mmi^(-1) - 1) / (-1)
+  )
 
-summary(best_lm_1.3)
-plot(best_lm_1.3)
+model_lr <- lm(
+  mmi_bc_neg1 ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw + mt_Mw, data = data_sf
+  )
+
+plot(model_lr)
+summary(model_lr)
 ```
 
-# Best Subset Selection — Filtered Dataset
-
-Uses best subset selection on observations with at least five reports to find the best combination of predictors for log-transformed MMI.
-
-```{r}
-best <- regsubsets(
-  log(reported_mmi) ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw,
-  data = data_sf_5,
-  nvmax = 4
-)
-
-summary(best)
-
-plot(best)
-
-summary(best)$bic
-```
-# Selected Linear Model — Filtered Dataset
-
-Fits the selected linear model for the filtered dataset and checks its summary and diagnostic plots.
-
-```{r}
-best_lm <- lm(log(reported_mmi) ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw,
-  data = data_sf_5
-)
-
-summary(best_lm)
-plot(best_lm)
-```
 
 # Mixed-Effects Model
 
@@ -173,7 +125,7 @@ still very Work in progress
 
 ```{r}
 
-model_mem <- lmer(
+model_mem_1 <- lmer(
   log(reported_mmi) ~ Rhypo_km + event_depth_km + Vs30_raw +
     (1 | publicid),
   data = data_sf
