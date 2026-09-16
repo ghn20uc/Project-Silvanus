@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2016p761676,earthquake,2016-10-08T19:41:16Z,2016-11-03T05:10:23Z,178.9163208,-37.1126442,5.711354385,7.295280457,M,NA,LOCSAT,confirmed,manual,iasp91,36,32,24,0.6614919305,268.9255219,0.7079572472,0

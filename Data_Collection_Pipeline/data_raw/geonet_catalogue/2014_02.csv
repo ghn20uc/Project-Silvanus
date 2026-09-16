@@ -1,0 +1,7 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2014p135735,outside of network interest,2014-02-20T05:18:18Z,2014-02-23T22:30:52Z,-177.63451,-32.457756,5.1049421,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,60,54,42,3.1950393,211.68298,1.7878977,0
+2014p130658,outside of network interest,2014-02-18T08:14:37Z,2014-02-20T04:28:15Z,-178.34325,-35.023457,5.1176246,107.02803,M,NA,LOCSAT,confirmed,manual,iasp91,98,94,71,4.0447545,210.93716,1.0671519,0
+2014p125882,earthquake,2014-02-16T13:50:18Z,2014-02-18T23:26:36Z,168.20165,-43.993448,5.1589149,5.0025,ML,operator assigned,NonLinLoc,confirmed,manual,nz3drx,10,8,7,0.43150882,267.97569,0.84991225,0.12312317
+2014p116412,outside of network interest,2014-02-13T01:41:04Z,2014-02-17T02:01:35Z,-178.26877,-32.915527,5.0453047,112.19979,M,NA,LOCSAT,confirmed,manual,iasp91,23,14,5,3.6543074,202.64545,2.6440909,0
+2014p090816,outside of network interest,2014-02-03T14:26:17Z,2014-02-12T01:10:18Z,-177.89363,-33.05032,5.2434019,33,ML,operator assigned,LOCSAT,confirmed,manual,iasp91,31,22,16,3.7765548,209.43663,1.3148237,0.16121336
+2014p087554,outside of network interest,2014-02-02T09:26:37Z,2014-02-11T02:52:34Z,-177.73259,-32.923985,6.4485331,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,25,15,13,3.6540439,213.92513,2.3748721,0

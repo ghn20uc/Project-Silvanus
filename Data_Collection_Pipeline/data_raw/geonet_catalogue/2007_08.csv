@@ -1,0 +1,6 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2782508,other,2007-08-19T13:30:41Z,2012-02-24T17:13:00Z,-178.69,-33.908,5.5,38.8,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,10,9,0,4.39,313,0.38649,0
+2782085,other,2007-08-18T12:24:06Z,2012-02-24T17:06:00Z,178.873,-32.505,5,372,Mb,operator assigned,GROPE,reviewed,NA,nz1dr,10,7,0,5.579,339,0.28377,0
+2781713,other,2007-08-17T16:45:20Z,2012-02-24T17:04:00Z,-178.808,-32.51,5,35,Mb,operator assigned,GROPE,reviewed,NA,nz1dr,10,8,0,6.047,318,1.39761,0
+2778272,other,2007-08-10T10:11:30Z,2012-02-24T16:47:00Z,179.731,-32.499,5.3,282.3,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,27,22,0,5.187,312,1.14371,0
+2774820,other,2007-08-03T01:49:40Z,2012-02-24T16:17:00Z,-179.35201,-33.458,5.1,22.4,Mb,operator assigned,GROPE,reviewed,NA,nz1dr,13,10,0,4.52,311,1.53589,0

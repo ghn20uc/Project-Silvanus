@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2021p967892,earthquake,2021-12-25T02:52:04Z,2021-12-25T02:56:51Z,-179.1451111,-32.71156311,5.174354568,221.3466797,MLv,NA,LOCSAT,confirmed,manual,iasp91,31,23,29,3.595866442,182.4529762,1.166431582,0.2234489265

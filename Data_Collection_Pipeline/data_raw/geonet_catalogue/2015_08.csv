@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2015p607206,outside of network interest,2015-08-13T15:58:31Z,2015-08-19T03:42:40Z,-178.352,-32.894,5.137308906,9,M,NA,NA,NA,manual,NA,0,0,48,0,0,2.385622499,0

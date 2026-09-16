@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2025p094949,earthquake,2025-02-05T03:08:56Z,2025-02-05T03:19:33Z,178.97007751464844,-34.86503982543945,5.02571050682849,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,28,27,41,2.7446300983428955,284.6034240722656,0.68261795814054,0

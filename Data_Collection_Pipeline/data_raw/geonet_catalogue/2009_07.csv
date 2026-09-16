@@ -1,0 +1,38 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+3126592,earthquake,2009-07-19T08:48:43Z,2013-07-03T10:47:00Z,166.16429,-45.33741,5.2,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,21,12,0,0.471,266,0.23176,0
+3126520,earthquake,2009-07-19T05:11:33Z,2013-06-24T17:18:00Z,166.09659,-45.37895,5.3,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,19,13,0,0.495,258,0.20008,0
+3126277,earthquake,2009-07-18T15:33:46Z,2013-06-24T17:17:00Z,166.65356,-45.53456,5,23.0729,Mw,NA,GROPE,reviewed,manual,nz1dr,18,12,0,0.074,214,0.15637,0
+3125691,earthquake,2009-07-17T06:39:23Z,2013-06-24T17:13:00Z,166.50191,-45.33122,5.2,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,26,13,0,0.254,236,0.25335,0
+3125523,earthquake,2009-07-16T22:18:23Z,2013-06-24T17:11:00Z,166.12094,-46.18637,5.7,33,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,11,9,0,0.389,283,0.24588,0
+3125421,earthquake,2009-07-16T17:27:40Z,2013-06-24T17:11:00Z,166.50856,-45.46636,5,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,14,10,0,0.454,225,0.1391,0
+3125201,earthquake,2009-07-16T06:30:01Z,2013-06-24T17:08:00Z,166.5722,-45.69186,5,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,12,7,0,0.467,233,0.21631,0
+3125083,earthquake,2009-07-16T00:44:46Z,2013-07-03T13:52:00Z,165.89288,-46.16516,5.3,5,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,11,9,0,0.547,279,0.31494,0
+3125077,earthquake,2009-07-16T00:24:05Z,2013-07-03T13:50:00Z,165.98418,-46.1404,5.6,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,12,9,0,0.485,287,0.32227,0
+3793036,earthquake,2009-07-15T23:41:20Z,2013-05-14T10:07:00Z,167.04752,-45.51938,5.114,67.4409,ML,NA,GROPE,reviewed,NA,nz1dr,26,14,20,0.092,196,0.15158,0.329
+3792841,earthquake,2009-07-15T21:36:02Z,2013-05-14T10:05:00Z,166.10686,-46.01078,5.135,12,ML,operator assigned,GROPE,reviewed,NA,nz1dr,12,7,21,0.429,281,0.37763,0.24
+3352355,earthquake,2009-07-15T13:50:39Z,2013-07-03T13:36:00Z,166.54713,-45.44289,5.5,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,19,12,0,0.428,227,0.32628,0
+3124834,earthquake,2009-07-15T11:49:42Z,2013-06-24T17:05:00Z,166.61771,-45.59642,5.001,5,ML,operator assigned,GROPE,reviewed,manual,nz1dr,12,7,23,0.399,255,0.25109,0.174
+3332165,earthquake,2009-07-15T11:44:14Z,2013-06-24T17:40:00Z,166.5941,-45.53629,5.121,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,16,9,17,0.4,219,0.36597,0.182
+3330588,earthquake,2009-07-15T11:35:43Z,2013-06-24T17:40:00Z,166.68178,-45.57671,5.056,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,14,9,27,0.35,225,0.27082,0.196
+3124813,earthquake,2009-07-15T10:46:00Z,2013-06-24T17:05:00Z,166.19542,-46.037,5.109,20,ML,operator assigned,GROPE,reviewed,manual,nz1dr,11,5,11,0.362,287,0.42255,0.233
+3321335,earthquake,2009-07-15T10:36:42Z,2013-06-24T17:40:00Z,166.08278,-46.0501,5.202,20,ML,operator assigned,GROPE,reviewed,manual,nz1dr,9,7,23,0.432,283,0.25555,0.203
+3124807,earthquake,2009-07-15T10:21:32Z,2013-06-24T17:05:00Z,165.84415,-46.19568,5.014,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,9,5,14,0.582,298,0.45876,0.199
+3316575,earthquake,2009-07-15T10:16:16Z,2013-06-24T17:39:00Z,166.64261,-45.48478,5.169,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,14,8,23,0.36,231,0.25343,0.216
+3314094,earthquake,2009-07-15T10:12:30Z,2013-06-24T17:39:00Z,166.08502,-46.03155,5.175,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,9,5,15,0.436,282,0.3015,0.222
+3124802,earthquake,2009-07-15T10:11:20Z,2013-06-24T17:05:00Z,166.51402,-45.93456,5.053,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,11,7,14,0.261,250,0.47537,0.318
+3314092,earthquake,2009-07-15T10:11:15Z,2013-06-24T17:39:00Z,165.39171,-46.07088,5.286,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,10,5,13,0.902,299,0.22329,0.229
+3124798,earthquake,2009-07-15T10:01:50Z,2013-06-24T17:05:00Z,166.43488,-45.83543,5.533,5,ML,operator assigned,GROPE,reviewed,manual,nz1dr,13,10,28,0.374,250,0.2163,0.23
+3313472,earthquake,2009-07-15T09:55:07Z,2013-06-24T17:39:00Z,166.53592,-45.6745,5.296,5,ML,operator assigned,GROPE,reviewed,manual,nz1dr,12,8,25,0.481,237,0.12777,0.372
+3313467,earthquake,2009-07-15T09:53:46Z,2013-06-24T17:39:00Z,166.02161,-46.05949,5.073,20,ML,operator assigned,GROPE,reviewed,manual,nz1dr,10,5,14,0.471,294,0.20545,0.17
+3124795,earthquake,2009-07-15T09:52:17Z,2013-06-24T17:05:00Z,165.88339,-46.03458,5.273,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,13,9,31,0.57,287,0.38776,0.282
+3308774,earthquake,2009-07-15T09:46:15Z,2013-06-24T17:39:00Z,166.08727,-46.02916,5.196,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,12,8,21,0.435,291,0.24237,0.33
+3308618,earthquake,2009-07-15T09:41:52Z,2013-06-24T17:39:00Z,165.74527,-46.07237,6.061,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,12,8,40,0.657,289,0.19626,0.331
+3124791,earthquake,2009-07-15T09:38:22Z,2013-06-24T17:05:00Z,173.55429,-40.1781,5.412,167.1024,ML,NA,GROPE,reviewed,manual,nz1dr,69,66,36,0.684,144,0.21001,0.289
+3308274,earthquake,2009-07-15T09:36:18Z,2013-06-24T17:39:00Z,166.78242,-45.53808,5.085,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,19,12,16,0.271,218,0.15781,0.171
+3308261,earthquake,2009-07-15T09:34:40Z,2013-06-24T17:39:00Z,166.69275,-45.60442,5.135,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,11,6,14,0.352,223,0.34533,0.305
+3129439,earthquake,2009-07-15T09:29:07Z,2013-06-24T17:28:00Z,166.80135,-45.81994,5.209,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,12,6,14,0.358,201,0.44993,0.318
+3130312,earthquake,2009-07-15T09:27:45Z,2013-06-24T17:31:00Z,166.77272,-46.0096,5.275,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,10,5,10,0.171,184,0.33116,0.243
+3130305,earthquake,2009-07-15T09:26:50Z,2013-06-24T17:30:00Z,166.373,-45.79725,5.3,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,11,6,8,0.428,269,0.46554,0.223
+3130290,earthquake,2009-07-15T09:26:17Z,2013-06-24T17:30:00Z,166.37149,-45.79797,5.392,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,13,6,9,0.428,269,0.46998,0.211
+3128974,earthquake,2009-07-15T09:25:20Z,2013-06-24T17:27:00Z,166.18684,-46.01908,5.625,12,ML,operator assigned,GROPE,reviewed,manual,nz1dr,11,6,9,0.374,287,0.41497,0.129
+3124785,earthquake,2009-07-15T09:22:29Z,2013-06-24T17:04:00Z,166.58707,-45.77025,7.8,12,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,19,17,0,0.403,230,0.15613,0

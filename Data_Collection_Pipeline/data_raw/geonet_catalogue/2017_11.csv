@@ -1,0 +1,4 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2017p885383,earthquake,2017-11-24T14:11:34Z,2017-11-28T03:35:43Z,178.869339,-35.17054367,5.141884991,12,M,operator assigned,LOCSAT,confirmed,manual,iasp91,45,28,22,2.42971611,290.7936554,1.645950441,0
+2017p884888,outside of network interest,2017-11-24T09:48:01Z,2017-11-28T02:32:10Z,-178.9552917,-33.98312759,5.208076374,148.2172089,M,NA,LOCSAT,confirmed,manual,iasp91,107,86,58,4.208168507,159.2044773,2.031725716,0
+2017p850605,outside of network interest,2017-11-11T17:22:03Z,2017-11-13T00:57:43Z,-179.7615356,-34.15345383,5.120937864,88.18572998,M,NA,LOCSAT,confirmed,manual,iasp91,18,15,25,3.745851755,181.8653088,0.556489742,0

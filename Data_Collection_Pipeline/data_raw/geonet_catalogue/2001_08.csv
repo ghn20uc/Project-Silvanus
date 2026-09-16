@@ -1,0 +1,18 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+1783409,earthquake,2001-08-30T22:36:54Z,2010-01-13T21:39:00Z,-179.56441,-37.12354,5.313,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,17,13,15,1.766,305,0.29945,0.191
+1783170,earthquake,2001-08-29T13:54:56Z,2010-01-13T21:39:00Z,-179.09401,-36.49652,5.144,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,22,17,9,3.148,314,0.24256,0.195
+1782885,earthquake,2001-08-28T04:27:16Z,2010-01-13T21:39:00Z,177.06667,-36.98818,5.151,267.7488,ML,NA,GROPE,reviewed,manual,nz1dr,22,18,5,0.548,233,0.2323,0.223
+1782742,earthquake,2001-08-27T14:56:34Z,2010-01-13T21:39:00Z,-179.49103,-36.75766,5.105,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,29,25,14,2.701,309,0.20013,0.232
+1782729,earthquake,2001-08-27T12:50:35Z,2010-01-13T21:39:00Z,-179.40862,-36.54986,5.399,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,33,26,15,2.892,312,0.26082,0.229
+1781932,earthquake,2001-08-24T21:33:44Z,2010-01-13T21:39:00Z,-177.78696,-37.51431,5.333,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,17,14,11,3.475,311,0.49001,0.211
+1865127,earthquake,2001-08-24T21:18:47Z,2010-01-13T21:39:00Z,-178.86177,-36.31432,5.064,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,12,9,9,3.373,318,0.61944,0.199
+1781928,earthquake,2001-08-24T21:16:32Z,2010-01-13T21:39:00Z,-179.18008,-36.7284,5.238,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,22,18,13,2.904,311,0.22131,0.208
+1781814,earthquake,2001-08-24T11:04:35Z,2010-01-13T21:39:00Z,-179.08209,-37.2041,5.045,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,20,16,11,2.68,309,0.26482,0.214
+1863247,earthquake,2001-08-22T13:41:56Z,2010-01-13T21:38:00Z,-179.42239,-36.96033,5.024,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,25,20,11,2.606,308,0.36975,0.157
+1781010,earthquake,2001-08-22T05:28:02Z,2010-01-13T21:38:00Z,-179.39015,-36.84943,5.039,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,15,11,7,2.698,310,0.3303,0.22
+1780994,earthquake,2001-08-22T04:39:27Z,2010-01-13T21:38:00Z,-179.45409,-36.90005,5.25,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,21,17,15,2.626,308,0.1733,0.149
+1780973,earthquake,2001-08-22T03:16:10Z,2010-01-13T21:38:00Z,-179.28612,-36.75417,5.066,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,21,16,13,2.823,310,0.26394,0.2
+1780773,earthquake,2001-08-21T13:44:41Z,2010-01-13T21:38:00Z,-179.26903,-36.6509,5.275,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,25,20,15,2.903,312,0.35617,0.186
+1780751,earthquake,2001-08-21T12:22:20Z,2010-01-13T21:38:00Z,-179.35541,-36.79758,5.105,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,26,21,13,2.753,310,0.16733,0.237
+1780673,earthquake,2001-08-21T06:51:57Z,2010-01-13T21:38:00Z,-178.47597,-36.48562,7.107,33,ML,operator assigned,GROPE,reviewed,manual,nz1dr,32,30,19,3.494,315,0.23587,0.414
+1775252,earthquake,2001-08-12T07:42:43Z,2010-01-13T21:38:00Z,175.94891,-37.99919,5.118,270.0551,ML,NA,GROPE,reviewed,manual,nz1dr,35,30,6,0.262,99,0.21437,0.269

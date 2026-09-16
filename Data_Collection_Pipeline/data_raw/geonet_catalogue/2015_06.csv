@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2015p482535,earthquake,2015-06-28T12:53:47Z,2015-07-05T08:11:44Z,-177.313858,-32.40633392,5.015214005,52.79319763,M,NA,LOCSAT,confirmed,manual,iasp91,94,77,38,3.177389622,218.23526,2.47452511,0

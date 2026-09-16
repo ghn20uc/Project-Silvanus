@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2020p316088,earthquake,2020-04-26T22:52:11Z,2020-05-04T02:59:00Z,167.536087,-44.99587631,5.228785222,71.31930542,M,NA,LOCSAT,confirmed,manual,iasp91,37,25,10,0.4256067872,189.4542274,0.5752043878,0

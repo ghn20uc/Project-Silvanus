@@ -1,0 +1,3 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2023p192074,earthquake,2023-03-13T01:37:19Z,2023-03-28T03:10:24Z,176.8643799,-43.971763610000004,5.669209487,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,44,34,42,2.677706718,155.1781845,1.158355074,0
+2023p167719,earthquake,2023-03-04T01:19:33Z,2023-03-24T01:42:57Z,-178.1749573,-32.52590179,5.124812965,33,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,29,24,33,3.260886908,170.2916052,1.493635626,0.2673687101

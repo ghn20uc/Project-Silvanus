@@ -1,0 +1,387 @@
+---
+title: "tree"
+format: typst
+editor: visual
+---
+
+## Turn data into classification prob, MMI point is treated as oridinal.
+
+```{r}
+library(tree)
+library(dplyr)
+library(rpart)
+library(randomForest)
+library(gbm)
+```
+
+Read Yanxi file
+
+```{r}
+earthquake_data = read_parquet('data_processed/NZ_FR_IAR_modelling_strict_mtMw.parquet')
+```
+
+```{r}
+glimpse(earthquake_data)
+
+earthquake_data_trim <- earthquake_data[, c("publicid",
+                                       "Mw_model",
+                                       "Mw",
+                                       "M_model_is_Mw",
+                                       "Mw_strict",
+                                       "Repi_km",
+                                       "Rhypo_km",
+                                       "Rcentroid_km",
+                                       "Vs30_m_s",
+                                       "ln_Vs30",
+                                       "reported_mmi",
+                                       "report_count",
+                                       "fault_style",
+                                       "has_felt_rapid",
+                                       "has_moment_tensor"
+                                        
+)]
+
+glimpse(earthquake_data_trim)
+```
+
+```{r}
+colnames(earthquake_data_trim)
+
+table(earthquake_data_trim$reported_mmi)
+
+unique(earthquake_data_trim$fault_style)
+```
+
+MMI value below 3 is only 7 observations recorded. The fact that below 3 MMI is very hard for human to really consider correctly report, therefore removing observation below 3, giving 197421 - 7 = 197414 total MMI count.
+
+```{r}
+colSums(is.na(earthquake_data_trim))
+
+earthquake_data_trim <- earthquake_data_trim[earthquake_data_trim$reported_mmi >= 3, ]
+
+table(earthquake_data_trim$reported_mmi)
+```
+
+Changing MMI to ordinal data
+
+```{r}
+earthquake_data_trim$reported_mmi <- ordered(earthquake_data_trim$reported_mmi, levels = 3:8)
+```
+
+```{r}
+summary(earthquake_data_trim)
+
+all(earthquake_data_trim$Mw_model == earthquake_data_trim$Mw,
+    earthquake_data_trim$Mw_model == earthquake_data_trim$Mw_strict
+)
+```
+
+After summary their are quite some columns that actually the same: Mw_model, Mw, Mw_strict, remove and only keep one. Sanity check columns as has_moment_tensor and has_felt_rapid also being removed. Column fault_style is also changed into nominal data and NA change into "unknown" for tree model.
+
+```{r}
+earthquake_data_trim <- earthquake_data_trim[, c("publicid",
+                                                 "Mw",
+                                            "Repi_km",
+                                            "Rhypo_km",
+                                            "Rcentroid_km",
+                                            "Vs30_m_s",
+                                            "ln_Vs30",
+                                            "reported_mmi",
+                                            "report_count",
+                                            "fault_style"
+)]
+
+
+earthquake_data_trim$fault_style[is.na(earthquake_data_trim$fault_style)] <- "unknown"
+
+earthquake_data_trim$fault_style <- factor(earthquake_data_trim$fault_style)
+```
+
+```{r}
+glimpse(earthquake_data_trim)
+```
+
+```{r}
+hist(
+  earthquake_data_trim$Vs30_m_s,
+  breaks = 50,
+  main = "Distribution of Vs30",
+  xlab = "Vs30 (m/s)",
+  ylab = "Frequency"
+)
+```
+
+```{r}
+hist(
+  earthquake_data_trim$ln_Vs30,
+  breaks = 50,
+  main = "Distribution of ln(Vs30)",
+  xlab = "ln(Vs30)",
+  ylab = "Frequency"
+)
+```
+
+Even with slightly skew data of Vs30, it is still meaningful for tree model, therefore no need to smooth data with ln_Vs30, removing the column.
+
+```{r}
+earthquake_data_trim <- earthquake_data_trim[, c("publicid",
+                                                 "Mw",
+                                                 "Repi_km",
+                                                 "Rhypo_km",
+                                                 "Rcentroid_km",
+                                                 "Vs30_m_s",
+                                                 "reported_mmi",
+                                                 "report_count",
+                                                 "fault_style"
+)]
+```
+
+Split data for train and test
+
+```{r}
+set.seed(1911)
+
+publicids <- unique(earthquake_data_trim$publicid)
+
+train_ids <- sample(publicids, size = floor(0.8 * length(publicids)))
+
+train <- earthquake_data_trim[earthquake_data_trim$publicid %in% train_ids,]
+
+test <- earthquake_data_trim[!earthquake_data_trim$publicid %in% train_ids,]
+
+
+dim(train)
+dim(test)
+```
+
+```{r}
+tree_earthquake <- tree(reported_mmi ~., train)
+
+summary(tree_earthquake)
+```
+
+```{r}
+plot(tree_earthquake)
+text(tree_earthquake, pretty = 0, cex = 0.8)
+tree_earthquake
+```
+
+```{r}
+cv_tree_earthquake <- cv.tree(tree_earthquake, FUN = prune.misclass, K = 10)
+
+plot(cv_tree_earthquake$size, cv_tree_earthquake$dev, type = 'b')
+```
+
+Cross validation shows 2 to 4 node is acceptable. Prune and check.
+
+```{r}
+prune_eq_2 <- prune.misclass(tree_earthquake, best = 2)
+
+plot(prune_eq_2)
+text(prune_eq_2, pretty = 0, cex = 0.8)
+```
+
+```{r}
+prune_eq_3 <- prune.misclass(tree_earthquake, best = 3)
+
+plot(prune_eq_3)
+text(prune_eq_3, pretty = 0, cex = 0.8)
+```
+
+```{r}
+prune_eq_4 <- prune.misclass(tree_earthquake, best = 4)
+
+plot(prune_eq_4)
+text(prune_eq_4, pretty = 0, cex = 0.8)
+```
+
+Checking trees with cinfusing matrix
+
+```{r}
+prune_2_pred <- predict(prune_eq_2, test, type = 'class')
+
+table(prune_2_pred, test$reported_mmi)
+```
+
+```{r}
+prune_3_pred <- predict(prune_eq_3, test, type = 'class')
+
+table(prune_3_pred, test$reported_mmi)
+```
+
+```{r}
+prune_4_pred <- predict(prune_eq_4, test, type = 'class')
+
+table(prune_4_pred, test$reported_mmi)
+```
+
+Three prune tree share the same confusing matrix. Accuracy is calculated
+
+```{r}
+accuracy1 <- sum(diag(table(prune_3_pred, test$reported_mmi))) / sum(table(prune_3_pred, test$reported_mmi))
+
+accuracy1
+```
+
+```{r}
+diag(table(prune_3_pred, test$reported_mmi)) / colSums(table(prune_3_pred, test$reported_mmi))
+```
+
+Not very high, as high as wild guess
+
+Build tree using library Rpart
+
+```{r}
+set.seed(1911)
+
+tree_rpart <- rpart(reported_mmi ~ Mw + Repi_km + Rhypo_km +Rcentroid_km + Vs30_m_s + fault_style, data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2)
+)
+
+tree_rpart$cptable
+plotcp(tree_rpart)
+plot(tree_rpart)
+text(tree_rpart, pretty = 0, cex = 0.8)
+```
+
+```{r}
+min(tree_rpart$cptable[, "xerror"])
+
+min_cv <- which.min(tree_rpart$cptable[, "xerror"]) 
+prune_rpart <- prune(tree_rpart, cp = tree_rpart$cptable[min_cv, "CP"])
+```
+
+```{r}
+plot(prune_rpart, main = "prune tree")
+text(prune_rpart, cex = 0.6)
+```
+
+```{r}
+pred_rpart <- predict(prune_rpart, test, type = "class")
+
+rpart_matrix <- table( Predicted = pred_rpart,Actual = test$reported_mmi)
+
+
+```
+
+```{r}
+accuracy2 <- sum(diag(rpart_matrix)) / sum(rpart_matrix)
+accuracy2
+```
+
+```{r}
+diag(rpart_matrix) / colSums(rpart_matrix)
+```
+
+Recall seems better but MMI 6 to 8 is unregconizable.
+
+Bagging
+
+```{r}
+set.seed(1911)
+
+bagging <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + Vs30_m_s + fault_style, data = train, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
+
+bagging
+```
+
+```{r}
+bag_pred <- predict(bagging, test)
+
+bag_matrix <- table(Predicted = bag_pred, Actual = test$reported_mmi)
+
+bag_matrix
+```
+
+```{r}
+accuracy3 <- sum(diag(bag_matrix)) / sum(bag_matrix)
+
+accuracy3
+```
+
+```{r}
+diag(bag_matrix) / colSums(bag_matrix)
+
+```
+
+```{r}
+importance(bagging, type = 2)
+varImpPlot(bagging, type = 2)
+```
+
+Random forest
+
+```{r}
+set.seed(1911)
+
+rf <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + Vs30_m_s + fault_style, data = train, ntree = 1000, importance = TRUE, do.trace = 100)
+
+rf
+```
+
+```{r}
+rf_pred <- predict(rf, test)
+
+rf_matrix <- table(Predicted = rf_pred, Actual = test$reported_mmi)
+
+rf_matrix
+```
+
+```{r}
+accuracy4 <- sum(diag(rf_matrix)) / sum(rf_matrix)
+
+accuracy4
+```
+
+```{r}
+diag(rf_matrix) / colSums(rf_matrix)
+```
+
+Bagging and random forest have a bit higher accuracy and recall of MMi but still not desirable.
+
+Boosting
+
+```{r}
+set.seed(1911)
+
+boost <- gbm(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + Vs30_m_s + fault_style, 
+             data = train, 
+             distribution = "multinomial", 
+             n.trees = 1000, 
+             interaction.depth = 4, 
+             shrinkage = 0.01, 
+             n.minobsinnode = 10,
+             cv.folds = 5,
+             verbose = FALSE)
+
+summary(boost)
+```
+
+Boost tree is different from decision tree, random forest, it pays more attention to Mw and distance variable than Vs30.
+
+```{r}
+optimize_boost <- gbm.perf(boost, method = "OOB")
+optimize_boost
+```
+
+```{r}
+boost_prob <- predict(boost, test, n.trees = optimize_boost, type = "response")
+boost_prob <- drop(boost_prob)
+
+boost_pred <- colnames(boost_prob)[max.col(boost_prob)]
+
+boost_pred <- factor(boost_pred,levels = levels(test$reported_mmi))
+
+boost_matrix <- table(Predicted = boost_pred, Actual = test$reported_mmi)
+
+boost_matrix
+```
+
+```{r}
+accuracy5 <- sum(diag(boost_matrix)) / sum(boost_matrix)
+
+accuracy5
+```
+
+```{r}
+diag(boost_matrix) / colSums(boost_matrix)
+```

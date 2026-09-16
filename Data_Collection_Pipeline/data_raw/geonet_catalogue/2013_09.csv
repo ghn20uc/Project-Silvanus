@@ -1,0 +1,4 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2013p712706,outside of network interest,2013-09-21T16:48:57Z,2015-06-24T02:49:52Z,-177.9211731,-33.38129044,5.834722147,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,24,16,15,4.1065626140000004,210.5439895,1.24699734,0
+2013p683303,outside of network interest,2013-09-10T19:43:12Z,2015-06-11T23:17:37Z,-178.6963654,-33.76052475,5.18722699,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,35,27,27,4.5334711070000004,197.3610077,1.155138441,0
+2013p666224,earthquake,2013-09-04T12:04:10Z,2015-06-05T01:15:56Z,174.4299966,-41.4927297,5.022509678,13.0859375,M,NA,NonLinLoc,confirmed,manual,nz3drx,30,22,15,0.301806666,115.4364756,0.4311521726,0

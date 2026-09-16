@@ -1,0 +1,5 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2022p401932,earthquake,2022-05-29T17:08:32Z,2022-06-12T21:31:57Z,-178.6791229,-33.3905983,5.327237957,33,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,30,25,24,4.163142681,162.4130421,1.43614846,0.2281502503
+2022p348831,earthquake,2022-05-10T01:36:45Z,2022-05-10T04:30:15Z,-178.6494293,-33.28055573,5.518545692,33,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,26,20,44,4.054418087,162.8877325,1.030010977,0.2382388955
+2022p335738,earthquake,2022-05-05T05:20:15Z,2022-05-05T05:34:24Z,-179.168045,-33.59082413,5.02505264,100,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,26,19,39,4.445286274,190.0760736,1.483499685,0.1941975553
+2022p334858,earthquake,2022-05-04T21:32:38Z,2022-06-01T23:54:28Z,-179.6696777,-35.30612946,5.35512559,33,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,27,22,23,2.780683994,151.0006647,0.7593098097,0.1728054259

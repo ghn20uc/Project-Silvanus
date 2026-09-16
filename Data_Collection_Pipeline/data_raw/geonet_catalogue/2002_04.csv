@@ -1,0 +1,3 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+1865099,earthquake,2002-04-11T01:04:38Z,2010-01-13T21:54:00Z,179.19548,-38.14315,5.039,58.3933,ML,NA,GROPE,reviewed,manual,nz1dr,33,28,6,0.892,273,0.16213,0.186
+1860345,earthquake,2002-04-01T20:14:36Z,2010-01-13T21:53:00Z,167.58595,-45.07451,5.627,128.9679,ML,NA,GROPE,reviewed,manual,nz1dr,10,6,6,0.467,228,0.17932,0.208

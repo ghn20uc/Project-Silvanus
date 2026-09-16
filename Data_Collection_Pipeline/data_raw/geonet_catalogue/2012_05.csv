@@ -1,0 +1,4 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2012p392201,earthquake,2012-05-25T02:44:49Z,2014-11-26T03:53:37Z,172.7723086,-43.5339582,5.475451422,14.7265625,M,NA,NonLinLoc,confirmed,manual,nz3drx,29,20,89,0.05401276747,126.7224793,0.5067228857,0
+2012p374723,outside of network interest,2012-05-18T15:31:35Z,2014-08-05T00:18:10Z,-179.5239258,-32.93701172,5.134169951,300.5263672,M,NA,NonLinLoc,confirmed,manual,iaspei91,39,28,21,3.925220452,176.8061694,0.904071703,0
+2012p356546,earthquake,2012-05-11T22:07:34Z,2014-06-18T03:30:35Z,167.1516905,-46.32062086,5.30370033,12.0175,M,operator assigned,NonLinLoc,confirmed,manual,nz3drx,20,14,7,0.3701315313,164.3515003,1.010509151,0

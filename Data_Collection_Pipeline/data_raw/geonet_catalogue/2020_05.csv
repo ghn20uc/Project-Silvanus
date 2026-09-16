@@ -1,0 +1,5 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2020p406638,earthquake,2020-05-30T10:56:54Z,2020-06-17T23:43:42Z,175.0029907,-40.44482422,5.021253394,35.7023735,MLv,NA,LOCSAT,confirmed,manual,iasp91,67,54,21,0.1709961742,61.83187866,0.3753079401,0.2582577825
+2020p404985,earthquake,2020-05-29T20:14:54Z,2020-05-29T20:41:05Z,-177.9142761,-32.58013916,5.500643668,33,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,50,40,27,3.307619572,206.2547913,1.346707177,0.1944793556
+2020p394658,earthquake,2020-05-26T00:34:04Z,2020-06-07T21:03:32Z,174.9823761,-40.47169113,5.396372366,34.31409836,M,NA,LOCSAT,confirmed,manual,iasp91,73,60,34,0.1861763895,62.38204956,0.3109194489,0
+2020p391429,earthquake,2020-05-24T19:53:33Z,2020-05-24T20:01:01Z,174.9778137,-40.44614029,5.84628854,36.52345657,M,NA,LOCSAT,confirmed,manual,iasp91,84,66,120,0.1900159866,62.58059692,0.5710789836,0

@@ -1,0 +1,6 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2021p557880,earthquake,2021-07-26T09:57:53Z,2021-07-26T10:29:04Z,-179.7083893,-32.79207993,5.435447696,391.7623596,mB,NA,LOCSAT,confirmed,manual,iasp91,45,36,66,5.029069901,311.4116058,0.8851292828,0.2218617436
+2021p554235,earthquake,2021-07-25T01:35:59Z,2021-07-25T01:48:38Z,-178.7387238,-33.66889191,5.103964511,150,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,28,27,17,4.44866848,196.0712471,0.5605164714,0.1236870541
+2021p553664,earthquake,2021-07-24T20:31:33Z,2021-07-24T20:45:01Z,-178.1492615,-33.47166061,5.118637927,12,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,22,18,6,4.201257706,205.4518912,1.428567673,0.08370487908
+2021p542196,earthquake,2021-07-20T14:41:22Z,2021-08-16T23:45:46Z,-178.5030823,-33.17361069,5.408428085,10,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,29,22,10,3.931255341,198.3754134,1.603834246,0.09689970358
+2021p522015,earthquake,2021-07-13T03:29:08Z,2021-07-13T05:04:36Z,-178.4789429,-33.30194473,5.156435389,33,mB,operator assigned,LOCSAT,confirmed,manual,iasp91,25,18,7,4.055709839,199.6166821,1.368082551,0.09772844314

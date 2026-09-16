@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+3308522,other,2010-05-17T18:57:52Z,2012-02-16T17:54:00Z,178.883,-34.991,5,142,Mb,operator assigned,GROPE,reviewed,NA,nz1dr,47,42,0,2.61,293,0.74128,0

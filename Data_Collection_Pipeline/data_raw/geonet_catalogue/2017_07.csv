@@ -1,0 +1,3 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2017p554868,outside of network interest,2017-07-25T07:13:31Z,2017-08-08T04:16:36Z,-179.3137817,-34.47681046,5.073844846,23.69815445,M,NA,LOCSAT,confirmed,manual,iasp91,25,24,45,3.633074999,192.6020222,0.7465787531,0
+2017p548275,outside of network interest,2017-07-22T20:40:29Z,2017-08-07T22:19:40Z,179.8339691,-32.32322311,5.116116092,246.7435455,M,NA,LOCSAT,confirmed,manual,iasp91,15,12,5,3.611660242,160.1423416,0.7518692478,0

@@ -1,0 +1,2 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2013p780567,earthquake,2013-10-16T19:26:23Z,2015-09-07T00:30:37Z,165.9180756,-47.40605545,5.198581261,12,M,operator assigned,LOCSAT,confirmed,manual,iasp91,32,23,23,1.344949961,313.5105762,1.129074784,0

@@ -1,0 +1,9 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2012p489219,outside of network interest,2012-06-30T00:14:51Z,2014-10-07T02:34:58Z,-178.1588593,-33.22257233,5.155590676,0,MLv,NA,LOCSAT,confirmed,manual,iasp91,45,29,26,3.953551531,204.1015286,1.830417521,0.273109729
+2012p489035,outside of network interest,2012-06-29T22:37:04Z,2014-10-07T01:57:06Z,-178.3182526,-33.13471603,5.410271559,33,MLv,operator assigned,LOCSAT,confirmed,manual,iasp91,41,24,17,3.875674725,201.7260351,1.396764914,0.2176290703
+2012p488969,outside of network interest,2012-06-29T22:01:53Z,2014-10-07T01:50:51Z,-178.0762482,-33.2253685,5.296700421,33,MLv,operator assigned,LOCSAT,confirmed,manual,iasp91,30,23,20,3.953315496,206.8617047,1.688673549,0.2301968323
+2012p468944,outside of network interest,2012-06-22T12:12:50Z,2014-09-30T02:30:17Z,-178.0059662,-33.0212326,5.067198453,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,42,27,24,3.748198509,206.0849259,1.325187738,0
+2012p468136,outside of network interest,2012-06-22T05:02:06Z,2014-09-30T01:39:29Z,-178.33,-32.979,5.175487772,7,M,NA,NA,confirmed,manual,NA,0,0,25,0,0,2.859610002,0
+2012p467831,outside of network interest,2012-06-22T02:20:06Z,2014-09-30T01:09:42Z,-178.65,-32.935,5.55407481,14,M,NA,NA,confirmed,manual,NA,0,0,20,0,0,3.700852645,0
+2012p467574,outside of network interest,2012-06-22T00:03:01Z,2014-09-29T22:18:19Z,-177.4952698,-33.33361435,5.153378707,180.0345306,M,NA,LOCSAT,confirmed,manual,iasp91,29,17,15,5.436169624,347.0816193,0.9605394487,0
+2012p434818,outside of network interest,2012-06-09T21:10:25Z,2014-09-11T02:17:20Z,-179.605484,-33.19030762,5.093113779,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,20,13,6,4.17351532,178.376276,2.769388474,0

@@ -1,0 +1,3 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2018p277211,earthquake,2018-04-13T13:38:12Z,2018-05-08T02:09:05Z,178.563797,-35.684150699999996,5.535686376,183.8565521,M,NA,LOCSAT,confirmed,manual,iasp91,56,48,25,1.885818601,268.0883026,0.8006525984,0
+2018p266243,earthquake,2018-04-09T12:14:23Z,2018-04-10T23:26:14Z,178.9009399,-37.15131378,5.127689691,12,M,operator assigned,LOCSAT,confirmed,manual,iasp91,36,28,22,0.6265274882,269.6116791,0.7361635291,0

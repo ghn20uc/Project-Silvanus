@@ -1,0 +1,6 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+3502920,earthquake,2011-04-26T04:39:40Z,2013-08-28T12:29:00Z,176.73041,-37.43037,5.208,177.5205,ML,NA,GROPE,reviewed,manual,nz1dr,59,54,54,0.438,147,0.1607,0.188
+3499092,earthquake,2011-04-18T13:03:02Z,2013-08-28T12:23:00Z,179.87399,-34.33601,6.6,86,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,70,61,0,3.463,266,0.56259,0
+3497857,earthquake,2011-04-16T05:49:22Z,2013-08-28T12:22:00Z,172.75789,-43.59924,5,8.9584,Mw,NA,GROPE,reviewed,manual,nz1dr,41,32,0,0.021,190,0.17498,0
+3496836,other,2011-04-14T05:45:17Z,2012-05-22T14:01:00Z,-178.526,-33.04901,5.6,18,MS,operator assigned,GROPE,reviewed,NA,nz1dr,36,30,0,5.196,291,0.53373,0
+3493568,earthquake,2011-04-07T22:12:44Z,2013-08-28T12:15:00Z,174.442,-39.61611,5.2,135.2323,Mw,NA,GROPE,reviewed,manual,nz1dr,97,84,0,0.157,65,0.20879,0

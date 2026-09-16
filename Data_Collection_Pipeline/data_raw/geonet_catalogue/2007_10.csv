@@ -1,0 +1,17 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+3585683,other,2007-10-31T22:06:47Z,2012-03-19T09:14:00Z,-178.22,-33.05301,5.2,59.7,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,11,8,0,5.321,323,1.00676,0
+2813265,earthquake,2007-10-27T07:54:56Z,2012-03-19T09:10:00Z,178.11697,-35.39477,5.3,5,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,14,13,0,2.17,265,0.30031,0
+2808688,other,2007-10-16T08:41:45Z,2012-03-19T09:02:00Z,-178.319,-33.03301,5.4,39.8,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,12,7,0,5.296,317,0.6883,0
+3681285,earthquake,2007-10-15T21:29:05Z,2012-03-28T18:00:00Z,167.50665,-44.80263,5.571,5,ML,operator assigned,GROPE,reviewed,manual,nz1dr,18,11,13,0.325,210,0.35297,0.221
+2808461,earthquake,2007-10-15T21:28:22Z,2012-03-19T09:01:00Z,167.35593,-44.71062,6.1,5,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,23,20,0,0.408,198,0.14924,0
+2808300,earthquake,2007-10-15T12:35:38Z,2012-03-22T09:36:00Z,167.48599,-44.77198,5.667,5,ML,operator assigned,GROPE,reviewed,manual,nz1dr,24,15,22,0.667,203,0.14932,0.256
+3683886,earthquake,2007-10-15T12:31:17Z,2012-04-02T18:11:00Z,167.4635,-44.81539,5.357,5,ML,operator assigned,GROPE,reviewed,manual,nz1dr,14,7,7,0.629,210,0.24673,0.113
+3683875,earthquake,2007-10-15T12:30:14Z,2012-04-02T18:10:00Z,167.25235,-44.64272,5.82,5,ML,operator assigned,GROPE,reviewed,manual,nz1dr,14,6,5,0.482,269,0.27347,0.242
+2808298,earthquake,2007-10-15T12:29:33Z,2012-03-30T14:52:00Z,167.43544,-44.73866,6.7,5,Mw,operator assigned,GROPE,reviewed,manual,nz1dr,32,23,0,0.356,188,0.15551,0
+2806906,other,2007-10-12T14:43:09Z,2012-03-19T08:58:00Z,-178.224,-33.209,5.3,35,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,14,11,0,5.187,317,0.44119,0
+2806496,outside of network interest,2007-10-11T16:25:05Z,2012-05-21T16:10:00Z,164.31,-49.05199,5.5,10,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,15,11,0,3.301,333,0.29962,0
+2802756,earthquake,2007-10-03T19:15:11Z,2012-05-21T16:06:00Z,172.86786,-42.0901,5.5,56.7151,Mw,NA,GROPE,reviewed,manual,nz1dr,38,34,0,0.29,61,0.24485,0
+2802736,outside of network interest,2007-10-03T18:03:03Z,2012-05-21T16:06:00Z,164.62199,-48.65501,5.3,7.1,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,16,11,0,2.854,331,0.43068,0
+2802497,outside of network interest,2007-10-03T03:32:56Z,2012-05-21T16:06:00Z,164.698,-48.724,5,17.4,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,14,11,0,2.89,331,0.36156,0
+2802459,outside of network interest,2007-10-03T01:43:25Z,2012-05-21T16:05:00Z,164.658,-48.63499,5.1,10,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,15,11,0,2.825,331,0.53582,0
+2802069,outside of network interest,2007-10-02T06:51:33Z,2012-03-19T08:53:00Z,165.008,-48.013,5.1,10,Mw,operator assigned,GROPE,reviewed,NA,nz1dr,15,10,0,2.171,327,0.30814,0

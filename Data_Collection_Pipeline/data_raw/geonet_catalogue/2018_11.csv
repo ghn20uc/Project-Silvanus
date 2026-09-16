@@ -1,0 +1,6 @@
+publicid,eventtype,origintime,modificationtime,longitude,latitude,magnitude,depth,magnitudetype,depthtype,evaluationmethod,evaluationstatus,evaluationmode,earthmodel,usedphasecount,usedstationcount,magnitudestationcount,minimumdistance,azimuthalgap,originerror,magnitudeuncertainty
+2018p900482,earthquake,2018-11-30T04:17:19Z,2018-12-11T22:53:19Z,166.5857239,-45.74363327,5.147880152,5,M,operator assigned,LOCSAT,confirmed,manual,iasp91,26,15,12,0.4278647304,230.8734055,1.024383095,0
+2018p896060,earthquake,2018-11-28T13:00:15Z,2018-12-10T00:34:25Z,165.4589081,-47.73537445,5.273060639,12,M,operator assigned,LOCSAT,confirmed,manual,iasp91,18,10,8,1.778950334,322.6739769,0.8685472167,0
+2018p890311,earthquake,2018-11-26T09:57:00Z,2018-12-06T22:28:21Z,165.5044708,-47.85105515,5.131232833,12,M,operator assigned,LOCSAT,confirmed,manual,iasp91,18,12,9,1.867833138,307.6136627,0.9441405441,0
+2018p886455,earthquake,2018-11-24T23:42:38Z,2018-12-05T04:16:41Z,165.4424591,-47.97293472,5.797087519,12,M,operator assigned,LOCSAT,confirmed,manual,iasp91,20,13,9,1.995807171,176.0685482,1.332144572,0
+2018p829286,earthquake,2018-11-03T20:03:45Z,2018-11-06T21:54:29Z,-179.3937531,-39.09737778,5.292749494,33,M,operator assigned,LOCSAT,confirmed,manual,iasp91,49,35,22,1.942753315,149.1281261,1.464539961,0
