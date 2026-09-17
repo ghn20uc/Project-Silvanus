@@ -22,27 +22,34 @@ library(leaps)
 library(lme4)
 
 
-data <- read_parquet("data.parquet")
+data <- read_parquet("data_processed/NZ_FR_IAR_final_dataset.parquet")
 
-data_sf <- data |>
-  st_as_sf(
-    coords = c("longitude", "latitude"),
-    crs = 4326,
-    remove = FALSE
+data <- data |>
+  drop_na(
+    reported_mmi,
+    Rhypo_km,
+    mt_Mw,
+    Vs30_raw,
+    event_depth_km,
+    publicid
   )
 
 
 # filters the dataset to the decided upon report count
-data_sf <- data_sf |>
+data_sd <- data |>
   filter(report_count >= 4)
-```
-# Box-Cox Transformation
 
-Uses a Box-Cox transformation to find the most suitable transformation of `reported_mmi` for the full dataset.
+data_re <- data |>
+  filter(report_count >= 5)
+```
+
+# Checking Vs30 data as no model wants to use it
+
+Uses a Box-Cox transformation to find the most suitable transformation of `felt_mmi_median_cells` for only Vs30.
 
 ```{r}
 bc <- boxcox(
-  lm(reported_mmi ~ felt_median, data = data_sf)
+  lm(felt_mmi_median_cells ~ Vs30_raw, data = data_sd)
 )
 
 best_lambda <- bc$x[which.max(bc$y)]
@@ -53,29 +60,24 @@ best_lambda
 
 # Box-Cox Model
 
-Applies the selected Box-Cox transformation using lambda = -1.3 and fits a linear model using `felt_median` as the predictor.
+Applies the selected Box-Cox transformation using x^2 and fits a linear model using `Vs30_raw` as the predictor.
 
 ```{r}
-data_sf <- data_sf |>
-  mutate(
-    mmi_bc_1.3 = (reported_mmi^(-1.3) - 1) / (-1.3)
-  )
-
-model_bc <- lm(mmi_bc_1.3 ~ felt_median, data = data_sf)
+model_bc <- lm(felt_mmi_median_cells^2 ~ Vs30_raw, data = data_sd)
 
 plot(model_bc)
 summary(model_bc)
 ```
-# Best Subset Selection — Full Dataset
+# Best Subset Selection
 
-Uses best subset selection to compare combinations of earthquake depth, hypocentral distance, felt median, moment magnitude and Vs30 for predicting the Box-Cox transformed MMI.
+Uses best subset selection to compare combinations of earthquake depth, hypocentral distance, moment magnitude and Vs30 for predicting the Median MMI.
 
 
 ```{r}
 model_lr_rss <- regsubsets(
-  reported_mmi ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw + mt_Mw,
-  data = data_sf,
-  nvmax = 5
+  felt_mmi_median_cells ~ event_depth_km + Rhypo_km + Vs30_raw + mt_Mw,
+  data = data_sd,
+  nvmax = 4
 )
 
 summary(model_lr_rss)
@@ -89,7 +91,7 @@ With the selected variables applies a Box-Cox analysis to determine the most sui
 
 ```{r}
 model_lr_bc <- boxcox(
-  lm(reported_mmi ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw + mt_Mw, data = data_sf)
+  lm(felt_mmi_median_cells ~ Rhypo_km + mt_Mw, data = data_sd)
 )
 
 best_lambda <- model_lr_bc$x[which.max(model_lr_bc$y)]
@@ -101,20 +103,24 @@ best_lambda
 # Selected Linear Model — Full Dataset
 
 Fits the model selected from the best subset analysis and boxcox transformations and checks its model summary and diagnostic plots.
-Note: A value of -1 was used instead of -1.272727 for simplicity, as both transformations produced very similar diagnostic plots and model results.
 
 ```{r}
-data_sf <- data_sf |>
-  mutate(
-    mmi_bc_neg1 = (reported_mmi^(-1) - 1) / (-1)
-  )
-
 model_lr <- lm(
-  mmi_bc_neg1 ~ event_depth_km + Rhypo_km + felt_median + Vs30_raw + mt_Mw, data = data_sf
+  felt_mmi_median_cells^2 ~ Rhypo_km + mt_Mw,
+  data = data_sd
   )
 
 plot(model_lr)
 summary(model_lr)
+```
+```{r}
+model_lr_2 <- lm(
+  felt_mmi_median_cells^2 ~ Rhypo_km + Vs30_raw + mt_Mw,
+  data = data_sd
+  )
+
+plot(model_lr_2)
+summary(model_lr_2)
 ```
 
 
@@ -124,12 +130,43 @@ Fits a linear mixed-effects model with earthquake ID (`publicid`) as a random ef
 still very Work in progress
 
 ```{r}
-
 model_mem_1 <- lmer(
-  log(reported_mmi) ~ Rhypo_km + event_depth_km + Vs30_raw +
-    (1 | publicid),
-  data = data_sf
-)
+  log(reported_mmi) ~ Rhypo_km + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_1)
+cat("\n")
 
-summary(model_mem)
+model_mem_2 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + mt_Mw + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_2)
+cat("\n")
+
+model_mem_3 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + mt_Mw + Vs30_raw + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_3)
+cat("\n")
+
+model_mem_4 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + mt_Mw + Vs30_raw + event_depth_km + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_4)
+cat("\n")
+
+
+anova(model_mem_1, model_mem_2, model_mem_3, model_mem_4)
+```
+```{r}
+model_mem_5 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + mt_Mw + event_depth_km + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_5)
+cat("\n")
+anova(model_mem_2, model_mem_5)
 ```
