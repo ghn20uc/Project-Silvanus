@@ -12,6 +12,8 @@ library(dplyr)
 library(rpart)
 library(randomForest)
 library(gbm)
+library(arrow)
+library(pROC)
 ```
 
 Read Yanxi file
@@ -384,4 +386,78 @@ accuracy5
 
 ```{r}
 diag(boost_matrix) / colSums(boost_matrix)
+```
+
+ROC and AUC to compare models
+
+```{r}
+prune3_prob <- predict(prune_eq_3, test, type = "vector")
+rpart_prob  <- predict(prune_rpart, test, type = "prob")
+bag_prob    <- predict(bagging, test, type = "prob")
+rf_prob     <- predict(rf, test, type = "prob")
+# boost_prob đã có sẵn từ phần Boosting ở trên (đã drop chiều thừa)
+```
+
+AUC multiclass, Hand & Till
+
+```{r}
+roc_prune3 <- multiclass.roc(test$reported_mmi, prune3_prob)
+roc_rpart  <- multiclass.roc(test$reported_mmi, rpart_prob)
+roc_bag    <- multiclass.roc(test$reported_mmi, bag_prob)
+roc_rf     <- multiclass.roc(test$reported_mmi, rf_prob)
+roc_boost  <- multiclass.roc(test$reported_mmi, boost_prob)
+
+auc_table <- data.frame(Model = c("Pruned tree (best = 3)", "Rpart", "Bagging", "Random Forest", "Boosting"), AUC = c(auc(roc_prune3), auc(roc_rpart), auc(roc_bag), auc(roc_rf), auc(roc_boost))
+)
+
+auc_table[order(-auc_table$AUC), ]
+```
+
+ROC of one MMI level comparing the rest level to see if it is distinguishable by each model
+
+```{r}
+mmi_levels <- levels(test$reported_mmi)
+
+plot_ovr_roc <- function(prob_matrix, actual, model_name) {
+  colors <- rainbow(length(mmi_levels))
+  plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1),
+       xlab = "False Positive Rate", ylab = "True Positive Rate",
+       main = paste("One-vs-Rest ROC -", model_name))
+  abline(a = 0, b = 1, lty = 2, col = "gray")
+
+  aucs <- numeric(length(mmi_levels))
+  for (i in seq_along(mmi_levels)) {
+    lvl <- mmi_levels[i]
+    binary_actual <- as.numeric(actual == lvl)
+    roc_obj <- roc(binary_actual, prob_matrix[, lvl], quiet = TRUE)
+    lines(1 - roc_obj$specificities, roc_obj$sensitivities, col = colors[i], lwd = 2)
+    aucs[i] <- auc(roc_obj)
+  }
+
+  legend("bottomright",
+         legend = paste0("MMI ", mmi_levels, " (AUC = ", round(aucs, 2), ")"),
+         col = colors, lwd = 2, cex = 0.6)
+
+  invisible(setNames(aucs, mmi_levels))
+}
+```
+
+```{r}
+plot_ovr_roc(prune3_prob, test$reported_mmi, "Pruned tree (best = 3)")
+```
+
+```{r}
+plot_ovr_roc(rpart_prob, test$reported_mmi, "Rpart")
+```
+
+```{r}
+plot_ovr_roc(bag_prob, test$reported_mmi, "Bagging")
+```
+
+```{r}
+plot_ovr_roc(rf_prob, test$reported_mmi, "Random Forest")
+```
+
+```{r}
+plot_ovr_roc(boost_prob, test$reported_mmi, "Boosting")
 ```
