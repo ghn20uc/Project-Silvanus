@@ -226,7 +226,7 @@ accuracy1
 ```
 
 ```{r}
-diag(table(prune_3_pred, test$reported_mmi)) / colSums(table(prune_3_pred, test$reported_mmi))
+
 ```
 
 Not very high, as high as wild guess
@@ -318,6 +318,11 @@ set.seed(1911)
 rf <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + Vs30_m_s + fault_style, data = train, ntree = 1000, importance = TRUE, do.trace = 100)
 
 rf
+```
+
+```{r}
+importance(rf, type = 2)
+varImpPlot(rf, type = 2, main = "Variable Importance - Random Forest")
 ```
 
 ```{r}
