@@ -226,7 +226,7 @@ accuracy1
 ```
 
 ```{r}
-
+diag(table(prune_3_pred, test$reported_mmi)) / colSums(table(prune_3_pred, test$reported_mmi))
 ```
 
 Not very high, as high as wild guess
