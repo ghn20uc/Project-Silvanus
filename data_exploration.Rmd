@@ -724,3 +724,126 @@ arrow::write_parquet(
   "data.parquet"
 )
 ```
+
+
+```{r}
+data_sd <- data |>
+  drop_na(
+    reported_mmi,
+    Rhypo_km,
+    mt_Mw,
+    Vs30_raw,
+    event_depth_km,
+    publicid
+  ) |>
+  filter(report_count >= 4)
+
+sd_by_min_reports <- map_dfr(1:30, function(min_reports) {
+  
+  filtered <- data_sd |>
+    filter(felt_report_count >= min_reports) |>
+    distinct(publicid, felt_median)
+  
+  tibble(
+    min_felt_reports = min_reports,
+    sd_felt_median = sd(filtered$felt_median, na.rm = TRUE),
+    n_earthquakes = sum(!is.na(filtered$felt_median))
+  )
+})
+
+ggplot(
+  sd_by_min_reports,
+  aes(x = min_felt_reports, y = sd_felt_median)
+) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = 1:30) +
+  theme_minimal() +
+  labs(
+    x = "Minimum Felt Reports per Earthquake",
+    y = "Standard Deviation of Felt Median",
+    title = "Standard Deviation of Felt Median by Minimum Felt Reports"
+  )
+
+earthquakes <- data_sd |>
+  distinct(publicid, felt_report_count)
+
+total_earthquakes <- nrow(earthquakes)
+
+earthquakes_remaining <- map_dfr(1:30, function(min_reports) {
+  
+  filtered <- earthquakes |>
+    filter(felt_report_count >= min_reports)
+  
+  tibble(
+    min_felt_reports = min_reports,
+    earthquakes_remaining = nrow(filtered),
+    percent_remaining = nrow(filtered) / total_earthquakes * 100
+  )
+})
+
+ggplot(
+  earthquakes_remaining,
+  aes(x = min_felt_reports, y = percent_remaining)
+) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = 1:30) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, 10)
+  ) +
+  theme_minimal() +
+  labs(
+    x = "Minimum Felt Reports per Earthquake",
+    y = "Earthquakes Remaining (%)",
+    title = "Earthquakes Retained by Minimum Felt Report Threshold"
+  )
+```
+
+```{r}
+data_check <- data |>
+  rowwise() |>
+  mutate(
+    calculated_median = {
+      
+      counts <- as.integer(c(
+        felt_mmi_1_reports,
+        felt_mmi_2_reports,
+        felt_mmi_3_reports,
+        felt_mmi_4_reports,
+        felt_mmi_5_reports,
+        felt_mmi_6_reports,
+        felt_mmi_7_reports,
+        felt_mmi_8_reports
+      ))
+      
+      if (sum(counts) > 0) {
+        median(rep(1:8, times = counts))
+      } else {
+        NA_real_
+      }
+    }
+  ) |>
+  ungroup()
+
+data_check |>
+  dplyr::select(
+    felt_mmi_median_cells,
+    calculated_median
+  ) |>
+  head(20)
+
+data_check |>
+  summarise(
+    total = n(),
+    matches = sum(
+      felt_mmi_median_cells == calculated_median,
+      na.rm = TRUE
+    ),
+    percent_match = mean(
+      felt_mmi_median_cells == calculated_median,
+      na.rm = TRUE
+    ) * 100
+  )
+```

@@ -4,7 +4,7 @@ output: html_notebook
 ---
 
 
-Picked >= 5 felt reports because it looked good, Hazel has said we need to have strong justification.
+Picked >= 4 felt reports because it looked good, Hazel has said we need to have strong justification.
 She suggested comparing the standard deviation as the minimum number of felt reports are needed, and standard error for random effects.
 
 
@@ -26,22 +26,60 @@ data <- read_parquet("data_processed/NZ_FR_IAR_final_dataset.parquet")
 
 data <- data |>
   drop_na(
-    reported_mmi,
     Rhypo_km,
     mt_Mw,
     Vs30_raw,
     event_depth_km,
     publicid
-  )
+  ) |>
+  rowwise() |>
+  mutate(
+    calculated_median = {
+      
+      counts <- as.integer(c(
+        felt_mmi_1_reports,
+        felt_mmi_2_reports,
+        felt_mmi_3_reports,
+        felt_mmi_4_reports,
+        felt_mmi_5_reports,
+        felt_mmi_6_reports,
+        felt_mmi_7_reports,
+        felt_mmi_8_reports
+      ))
+      
+      if (sum(counts) > 0) {
+        median(rep(1:8, times = counts))
+      } else {
+        NA_real_
+      }
+    }
+  ) |>
+  ungroup()
 
 
 # filters the dataset to the decided upon report count
 data_sd <- data |>
   filter(report_count >= 4)
-
-data_re <- data |>
-  filter(report_count >= 5)
 ```
+
+
+
+# Box-Cox Model
+
+Trying out other predictors and applying best subset selection.
+
+```{r}
+model_bc <- regsubsets(
+  calculated_median ~ event_depth_km + Rhypo_km + Vs30_raw + mt_Mw + Rcentroid_km + catalogue_magnitude,
+  data = data_sd,
+  nvmax = 3
+)
+
+summary(model_bc)
+plot(model_bc)
+summary(model_bc)$bic
+```
+
 
 # Checking Vs30 data as no model wants to use it
 
@@ -49,25 +87,23 @@ Uses a Box-Cox transformation to find the most suitable transformation of `felt_
 
 ```{r}
 bc <- boxcox(
-  lm(felt_mmi_median_cells ~ Vs30_raw, data = data_sd)
+  lm(calculated_median ~ mt_Mw + Rcentroid_km + catalogue_magnitude, data = data_sd)
 )
 
 best_lambda <- bc$x[which.max(bc$y)]
-
 best_lambda
 ```
-
-
-# Box-Cox Model
-
-Applies the selected Box-Cox transformation using x^2 and fits a linear model using `Vs30_raw` as the predictor.
-
 ```{r}
-model_bc <- lm(felt_mmi_median_cells^2 ~ Vs30_raw, data = data_sd)
+model_lr <- lm(
+  (I(calculated_median^2) ~ mt_Mw + Rcentroid_km + catalogue_magnitude),
+  data = data_sd
+  )
 
-plot(model_bc)
-summary(model_bc)
+plot(model_lr)
+summary(model_lr)
 ```
+
+
 # Best Subset Selection
 
 Uses best subset selection to compare combinations of earthquake depth, hypocentral distance, moment magnitude and Vs30 for predicting the Median MMI.
@@ -75,7 +111,7 @@ Uses best subset selection to compare combinations of earthquake depth, hypocent
 
 ```{r}
 model_lr_rss <- regsubsets(
-  felt_mmi_median_cells ~ event_depth_km + Rhypo_km + Vs30_raw + mt_Mw,
+  calculated_median ~ event_depth_km + Rhypo_km + Vs30_raw + mt_Mw + Rcentroid_km,
   data = data_sd,
   nvmax = 4
 )
@@ -91,11 +127,18 @@ With the selected variables applies a Box-Cox analysis to determine the most sui
 
 ```{r}
 model_lr_bc <- boxcox(
-  lm(felt_mmi_median_cells ~ Rhypo_km + mt_Mw, data = data_sd)
+  lm(calculated_median ~ event_depth_km + Rhypo_km + Vs30_raw + mt_Mw, data = data_sd)
 )
 
 best_lambda <- model_lr_bc$x[which.max(model_lr_bc$y)]
 best_lambda
+
+model_lr_bc2 <- boxcox(
+  lm(calculated_median ~ event_depth_km + Rcentroid_km + Vs30_raw + mt_Mw, data = data_sd)
+)
+
+best_lambda2 <- model_lr_bc2$x[which.max(model_lr_bc2$y)]
+best_lambda2
 ```
 
 
@@ -106,7 +149,7 @@ Fits the model selected from the best subset analysis and boxcox transformations
 
 ```{r}
 model_lr <- lm(
-  felt_mmi_median_cells^2 ~ Rhypo_km + mt_Mw,
+  (I(calculated_median^2) ~ event_depth_km + Rhypo_km + Vs30_raw + mt_Mw),
   data = data_sd
   )
 
@@ -115,12 +158,22 @@ summary(model_lr)
 ```
 ```{r}
 model_lr_2 <- lm(
-  felt_mmi_median_cells^2 ~ Rhypo_km + Vs30_raw + mt_Mw,
+  (I(calculated_median^2) ~ event_depth_km + Rcentroid_km + Vs30_raw + mt_Mw),
   data = data_sd
   )
 
 plot(model_lr_2)
 summary(model_lr_2)
+```
+
+```{r}
+model_lr_3 <- lm(
+  (I(calculated_median^2) ~ Rcentroid_km + Vs30_raw + mt_Mw),
+  data = data_sd
+  )
+
+plot(model_lr_3)
+summary(model_lr_3)
 ```
 
 
@@ -131,28 +184,28 @@ still very Work in progress
 
 ```{r}
 model_mem_1 <- lmer(
-  log(reported_mmi) ~ Rhypo_km + (1 | publicid), data = data_sd,
+  log(calculated_median) ~ Rhypo_km + (1 | publicid), data = data_sd,
   REML = FALSE
   )
 summary(model_mem_1)
 cat("\n")
 
 model_mem_2 <- lmer(
-  log(reported_mmi) ~ Rhypo_km + mt_Mw + (1 | publicid), data = data_sd,
+  log(calculated_median) ~ Rhypo_km + mt_Mw + (1 | publicid), data = data_sd,
   REML = FALSE
   )
 summary(model_mem_2)
 cat("\n")
 
 model_mem_3 <- lmer(
-  log(reported_mmi) ~ Rhypo_km + mt_Mw + Vs30_raw + (1 | publicid), data = data_sd,
+  log(calculated_median) ~ Rhypo_km + mt_Mw + Vs30_raw + (1 | publicid), data = data_sd,
   REML = FALSE
   )
 summary(model_mem_3)
 cat("\n")
 
 model_mem_4 <- lmer(
-  log(reported_mmi) ~ Rhypo_km + mt_Mw + Vs30_raw + event_depth_km + (1 | publicid), data = data_sd,
+  log(calculated_median) ~ Rhypo_km + mt_Mw + Vs30_raw + event_depth_km + (1 | publicid), data = data_sd,
   REML = FALSE
   )
 summary(model_mem_4)
@@ -160,13 +213,95 @@ cat("\n")
 
 
 anova(model_mem_1, model_mem_2, model_mem_3, model_mem_4)
+
 ```
 ```{r}
 model_mem_5 <- lmer(
-  log(reported_mmi) ~ Rhypo_km + mt_Mw + event_depth_km + (1 | publicid), data = data_sd,
+  log(calculated_median) ~ Rhypo_km + mt_Mw + event_depth_km + (1 | publicid), data = data_sd,
   REML = FALSE
   )
 summary(model_mem_5)
 cat("\n")
-anova(model_mem_2, model_mem_5)
+anova(model_mem_2, model_mem_4)
+
+data_sd |>
+  group_by(publicid) |>
+  summarise(
+    n_medians = n_distinct(calculated_median),
+    .groups = "drop"
+  ) |>
+  count(n_medians)
 ```
+
+```{r}
+earthquake_id <- "YOUR_PUBLICID"
+
+eq_data <- data_sd |>
+  filter(publicid == earthquake_id)
+
+eq_data <- eq_data |>
+  mutate(
+    predicted_log_mmi = predict(
+      model_mem_5,
+      newdata = eq_data,
+      allow.new.levels = TRUE
+    ),
+    predicted_mmi = exp(predicted_log_mmi),
+    difference = felt_median - predicted_mmi
+  )
+
+library(sf)
+
+eq_sf <- eq_data |>
+  st_as_sf(
+    coords = c("report_longitude", "report_latitude"),
+    crs = 4326,
+    remove = FALSE
+  )
+
+ggplot(eq_sf) +
+  geom_sf(
+    aes(colour = felt_median),
+    size = 3
+  ) +
+  scale_colour_viridis_c(
+    limits = c(1, 8),
+    name = "Observed MMI"
+  ) +
+  theme_minimal() +
+  labs(
+    title = paste("Observed Felt MMI:", earthquake_id)
+  )
+
+ggplot(eq_sf) +
+  geom_sf(
+    aes(colour = predicted_mmi),
+    size = 3
+  ) +
+  scale_colour_viridis_c(
+    limits = c(1, 8),
+    name = "Predicted MMI"
+  ) +
+  theme_minimal() +
+  labs(
+    title = paste("Predicted MMI:", earthquake_id)
+  )
+
+ggplot(eq_sf) +
+  geom_sf(
+    aes(colour = difference),
+    size = 3
+  ) +
+  scale_colour_gradient2(
+    midpoint = 0,
+    name = "Observed - Predicted"
+  ) +
+  theme_minimal() +
+  labs(
+    title = paste("Observed vs Predicted MMI:", earthquake_id)
+  )
+```
+
+
+
+

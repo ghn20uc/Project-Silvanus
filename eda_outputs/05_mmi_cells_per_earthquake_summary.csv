@@ -1,0 +1,2 @@
+earthquakes,min,q1,median,mean,q3,max,events_with_4_or_fewer_cells,pct_with_4_or_fewer_cells,events_with_5_or_fewer_cells,pct_with_5_or_fewer_cells
+452,1,2,15,578.9513274336283,616.5,9039,188,41.5929203539823,200,44.24778761061947
