@@ -1,0 +1,488 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Data Preparation
+Reads the two datasets and joins the Vs30 data to the main dataset based on the nearest Vs30 data point.
+
+```{r}
+library(arrow)
+library(MASS)
+library(tidyverse)
+library(sf)
+library(leaps)
+library(lme4)
+library(here)
+library(viridis)
+
+data <- read_parquet(
+  here("data_processed", "NZ_FR_IAR_final_dataset.parquet")
+)
+
+
+data <- data |>
+  drop_na(
+    Rhypo_km,
+    Mw,
+    Vs30_raw,
+    event_depth_km,
+    publicid
+  )
+
+
+# filters the dataset to the decided upon report count
+data_sd <- data |>
+  filter(report_count >= 4)
+```
+
+# Box-Cox Model
+
+Trying out other predictors and applying best subset selection.
+
+```{r}
+model_bc <- regsubsets(
+  reported_mmi ~ event_depth_km + Rhypo_km + Vs30_raw + Mw + geonet_catalogue_magnitude,
+  data = data_sd,
+  nvmax = 4
+)
+
+summary(model_bc)
+plot(model_bc)
+summary(model_bc)$bic
+```
+
+
+# Checking Vs30 data as no model wants to use it
+
+Uses a Box-Cox transformation to find the most suitable transformation of `felt_mmi_median_cells` for only Vs30.
+
+```{r}
+bc <- boxcox(
+  lm(reported_mmi ~ Mw + Rhypo_km + geonet_catalogue_magnitude + Vs30_raw, data = data_sd)
+)
+
+best_lambda <- bc$x[which.max(bc$y)]
+best_lambda
+```
+```{r}
+model_lr <- lm(
+  ((reported_mmi^-0.3434343 - 1) / -0.3434343) ~ Mw + Rhypo_km + geonet_catalogue_magnitude + Vs30_raw,
+  data = data_sd
+  )
+
+plot(model_lr)
+summary(model_lr)
+```
+
+
+# Best Subset Selection
+
+Uses best subset selection to compare combinations of earthquake depth, hypocentral distance, moment magnitude and Vs30 for predicting the Median MMI.
+
+
+```{r}
+model_lr_rss <- regsubsets(
+  reported_mmi ~ event_depth_km + Rhypo_km + Vs30_raw + Mw,
+  data = data_sd,
+  nvmax = 4
+)
+
+summary(model_lr_rss)
+plot(model_lr_rss)
+summary(model_lr_rss)$bic
+```
+
+# Filtering Felt Reports
+
+With the selected variables applies a Box-Cox analysis to determine the most suitable transformation for the filtered data.
+
+```{r}
+model_lr_bc <- boxcox(
+  lm(reported_mmi ~ event_depth_km + Rhypo_km + Vs30_raw + Mw, data = data_sd)
+)
+
+best_lambda <- model_lr_bc$x[which.max(model_lr_bc$y)]
+best_lambda
+```
+
+
+
+# Selected Linear Model — Full Dataset
+
+Fits the model selected from the best subset analysis and boxcox transformations and checks its model summary and diagnostic plots.
+
+```{r}
+model_lr <- lm(
+  ((reported_mmi^-0.3434343 - 1) / -0.3434343) ~ event_depth_km + Rhypo_km + Vs30_raw + Mw,
+  data = data_sd
+  )
+
+plot(model_lr)
+summary(model_lr)
+```
+
+# Mixed-Effects Model
+
+Fits a linear mixed-effects model with earthquake ID (`publicid`) as a random effect to account for multiple observations coming from the same earthquake.
+still very Work in progress
+
+```{r}
+model_mem_1 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_1)
+cat("\n")
+
+model_mem_2 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + Mw + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_2)
+cat("\n")
+
+model_mem_3 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + Mw + Vs30_raw + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_3)
+cat("\n")
+
+model_mem_4 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + Mw + Vs30_raw + event_depth_km + (1 | publicid), data = data_sd,
+  REML = FALSE
+  )
+summary(model_mem_4)
+cat("\n")
+
+
+anova(model_mem_1, model_mem_2, model_mem_3, model_mem_4)
+```
+
+```{r}
+data_sd |>
+  filter(!is.na(reported_mmi)) |>
+  count(publicid, name = "reported_mmi_count") |>
+  arrange(desc(reported_mmi_count)) |>
+  slice_head(n = 5)
+
+```
+
+```{r}
+unzip("statsnz-regional-council-2025-clipped-GPKG.zip", exdir = "nzmap")
+nzmap <- st_read("nzmap/regional-council-2025-clipped.gpkg")
+```
+
+```{r}
+# Choose earthquake
+earthquake_id <- "2021p169083"
+
+
+# Get data for selected earthquake
+eq_data <- data_sd |>
+  filter(publicid == earthquake_id)
+
+# Predicted MMI at actual Felt RAPID locations
+#
+# re.form = NULL includes the random effect for this earthquake
+
+eq_data$predicted_mmi <- exp(
+  predict(
+    model_mem_3,
+    newdata = eq_data,
+    re.form = NULL
+  )
+)
+
+# Convert Felt RAPID locations to spatial points
+
+eq_sf <- eq_data |>
+  st_as_sf(
+    coords = c(
+      "report_longitude",
+      "report_latitude"
+    ),
+    crs = 4326,
+    remove = FALSE
+  ) |>
+  st_transform(2193)
+
+# Get earthquake epicentre
+earthquake <- eq_data |>
+  slice(1) |>
+  st_as_sf(
+    coords = c(
+      "event_longitude",
+      "event_latitude"
+    ),
+    crs = 4326
+  ) |>
+  st_transform(2193)
+
+# Convert NZ map to NZTM
+nz_nztm <- nzmap |>
+  st_transform(2193)
+
+
+# Values for this earthquake
+mw_value <- eq_data$Mw[1]
+
+depth <- eq_data$event_depth_km[1]
+
+# Hold Vs30 constant so predicted regions can be circular
+vs30_value <- median(
+  eq_data$Vs30_raw,
+  na.rm = TRUE
+)
+
+# Generate predicted MMI over hypocentral distance
+#
+# Start at earthquake depth because when epicentral distance
+# is zero:
+#
+# Rhypo = depth
+#
+# Predict out to 1000 km so lower MMI boundaries can be found.
+prediction_data <- tibble(
+  Rhypo_km = seq(
+    from = depth,
+    to = 10000,
+    by = 0.1
+  ),
+  Mw = mw_value,
+  Vs30_raw = vs30_value,
+  publicid = earthquake_id
+)
+
+prediction_data$predicted_mmi <- exp(
+  predict(
+    model_mem_3,
+    newdata = prediction_data,
+    re.form = NULL
+  )
+)
+
+# Check prediction range
+minimum_predicted <- min(
+  prediction_data$predicted_mmi,
+  na.rm = TRUE
+)
+
+maximum_predicted <- max(
+  prediction_data$predicted_mmi,
+  na.rm = TRUE
+)
+
+print(
+  c(
+    minimum_predicted = minimum_predicted,
+    maximum_predicted = maximum_predicted
+  )
+)
+
+# Define boundaries between integer MMI categories
+#
+# For example:
+#
+# 3.5 separates MMI 3 and MMI 4
+# 4.5 separates MMI 4 and MMI 5
+# 5.5 separates MMI 5 and MMI 6
+mmi_boundaries <- seq(
+  1.5,
+  7.5,
+  by = 1
+)
+
+
+# Only keep boundaries that the model actually crosses
+mmi_boundaries <- mmi_boundaries[
+  mmi_boundaries >= minimum_predicted &
+  mmi_boundaries <= maximum_predicted
+]
+
+# Find hypocentral distance where each boundary occurs
+ring_distances <- map_dfr(
+  mmi_boundaries,
+  function(boundary) {
+
+    closest <- prediction_data |>
+      slice_min(
+        abs(predicted_mmi - boundary),
+        n = 1,
+        with_ties = FALSE
+      )
+
+    tibble(
+      boundary = boundary,
+      Rhypo_km = closest$Rhypo_km,
+      predicted_mmi = closest$predicted_mmi
+    )
+  }
+)
+
+# Convert hypocentral distance to horizontal map distance
+#
+# Rhypo^2 = Repi^2 + depth^2
+#
+# Therefore:
+#
+# Repi = sqrt(Rhypo^2 - depth^2)
+ring_distances <- ring_distances |>
+  mutate(
+    radius_km = sqrt(
+      pmax(
+        Rhypo_km^2 - depth^2,
+        0
+      )
+    )
+  )
+
+# Check boundary distances
+print(ring_distances)
+
+# Create spatial circles
+ring_geometry <- lapply(
+  ring_distances$radius_km,
+  function(radius) {
+
+    st_buffer(
+      st_geometry(earthquake),
+      dist = radius * 1000
+    )[[1]]
+
+  }
+)
+
+
+rings <- st_sf(
+  boundary = ring_distances$boundary,
+  radius_km = ring_distances$radius_km,
+  geometry = st_sfc(
+    ring_geometry,
+    crs = 2193
+  )
+)
+
+# Create labels for predicted MMI regions
+
+# Get earthquake coordinates
+epicentre_coords <- st_coordinates(earthquake)[1, ]
+
+# Order boundaries from smallest radius to largest
+label_data <- ring_distances |>
+  arrange(radius_km)
+
+# Create inner and outer radius of each region
+region_edges <- c(
+  0,
+  label_data$radius_km,
+  max(label_data$radius_km) + 100
+)
+
+# MMI at the centre of each region
+centre_mmi <- round(maximum_predicted)
+
+region_labels <- tibble(
+  mmi = centre_mmi - seq_along(head(region_edges, -1)) + 1,
+  radius_km = (
+    head(region_edges, -1) +
+    tail(region_edges, -1)
+  ) / 2
+)
+
+# Put labels to the east of the epicentre
+region_labels_sf <- st_as_sf(
+  region_labels |>
+    mutate(
+      x = epicentre_coords[1] + radius_km * 1000,
+      y = epicentre_coords[2],
+      label = paste("MMI", mmi)
+    ),
+  coords = c("x", "y"),
+  crs = 2193
+)
+
+mmi_map <- ggplot() +
+
+  geom_sf(
+    data = nz_nztm,
+    fill = "grey95",
+    colour = "grey60"
+  ) +
+
+  # Predicted MMI boundaries
+  geom_sf(
+    data = rings,
+    fill = NA,
+    linewidth = 1
+  ) +
+
+  # Observed reported MMI - smaller points
+  geom_sf(
+    data = eq_sf,
+    aes(colour = reported_mmi),
+    size = 1,
+    alpha = 0.7
+  ) +
+
+  # Predicted MMI region labels
+  geom_sf_label(
+    data = region_labels_sf,
+    aes(label = label),
+    size = 4,
+    fontface = "bold",
+    fill = "white"
+  ) +
+
+  # Earthquake epicentre
+  geom_sf(
+    data = earthquake,
+    shape = 4,
+    size = 4,
+    stroke = 1.5
+  ) +
+
+  scale_colour_viridis_c(
+    limits = c(3, 8),
+    breaks = 1:8,
+    name = "Reported MMI"
+  ) +
+
+  labs(
+    title = "Observed and Predicted Earthquake Intensity",
+    subtitle = paste("Earthquake:", earthquake_id),
+    x = NULL,
+    y = NULL
+  ) +
+
+  theme_minimal()
+
+# Display map
+mmi_map
+```
+
+```{r}
+ggsave(
+  filename = paste0(
+    "MMI_map_",
+    earthquake_id,
+    ".png"
+  ),
+  plot = mmi_map,
+  width = 10,
+  height = 8,
+  units = "in",
+  dpi = 300
+)
+```
+
+```{r}
+test <- read_parquet(
+  here("data_processed", "NZ_FR_IAR_dataset_all.parquet")
+)
+```
+
+
+
+
