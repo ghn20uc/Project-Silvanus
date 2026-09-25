@@ -123,7 +123,7 @@ hist(
 )
 ```
 
-Even with slightly skew data of Vs30, it is still meaningful for tree model, therefore no need to smooth data with ln_Vs30, removing the column.
+Slightly skew data of Vs30 and centralized, however to get value not too separate retain ln_Vs30, therefore removethe column Vs30.
 
 ```{r}
 earthquake_data_trim <- earthquake_data_trim[, c("publicid",
@@ -131,9 +131,8 @@ earthquake_data_trim <- earthquake_data_trim[, c("publicid",
                                                  "Repi_km",
                                                  "Rhypo_km",
                                                  "Rcentroid_km",
-                                                 "Vs30_m_s",
+                                                 "ln_Vs30",
                                                  "reported_mmi",
-                                                 "report_count",
                                                  "fault_style"
 )]
 ```
@@ -236,7 +235,7 @@ Build tree using library Rpart
 ```{r}
 set.seed(1911)
 
-tree_rpart <- rpart(reported_mmi ~ Mw + Repi_km + Rhypo_km +Rcentroid_km + Vs30_m_s + fault_style, data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2)
+tree_rpart <- rpart(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2)
 )
 
 tree_rpart$cptable
@@ -281,7 +280,7 @@ Bagging
 ```{r}
 set.seed(1911)
 
-bagging <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + Vs30_m_s + fault_style, data = train, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
+bagging <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, data = train, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
 
 bagging
 ```
@@ -315,7 +314,7 @@ Random forest
 ```{r}
 set.seed(1911)
 
-rf <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + Vs30_m_s + fault_style, data = train, ntree = 1000, importance = TRUE, do.trace = 100)
+rf <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, data = train, ntree = 1000, importance = TRUE, do.trace = 100)
 
 rf
 ```
@@ -350,7 +349,7 @@ Boosting
 ```{r}
 set.seed(1911)
 
-boost <- gbm(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + Vs30_m_s + fault_style, 
+boost <- gbm(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, 
              data = train, 
              distribution = "multinomial", 
              n.trees = 1000, 
