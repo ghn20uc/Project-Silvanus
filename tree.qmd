@@ -14,6 +14,7 @@ library(randomForest)
 library(gbm)
 library(arrow)
 library(pROC)
+library(caret)
 ```
 
 Read Yanxi file
@@ -23,7 +24,7 @@ earthquake_data = read_parquet('data_processed/NZ_FR_IAR_modelling_strict_mtMw.p
 ```
 
 ```{r}
-glimpse(earthquake_data)
+#glimpse(earthquake_data)
 
 earthquake_data_trim <- earthquake_data[, c("publicid",
                                        "Mw_model",
@@ -43,7 +44,7 @@ earthquake_data_trim <- earthquake_data[, c("publicid",
                                         
 )]
 
-glimpse(earthquake_data_trim)
+#glimpse(earthquake_data_trim)
 ```
 
 ```{r}
@@ -57,11 +58,11 @@ unique(earthquake_data_trim$fault_style)
 MMI value below 3 is only 7 observations recorded. The fact that below 3 MMI is very hard for human to really consider correctly report, therefore removing observation below 3, giving 197421 - 7 = 197414 total MMI count.
 
 ```{r}
-colSums(is.na(earthquake_data_trim))
+#colSums(is.na(earthquake_data_trim))
 
 earthquake_data_trim <- earthquake_data_trim[earthquake_data_trim$reported_mmi >= 3, ]
 
-table(earthquake_data_trim$reported_mmi)
+#table(earthquake_data_trim$reported_mmi)
 ```
 
 Changing MMI to ordinal data
@@ -99,9 +100,7 @@ earthquake_data_trim$fault_style[is.na(earthquake_data_trim$fault_style)] <- "un
 earthquake_data_trim$fault_style <- factor(earthquake_data_trim$fault_style)
 ```
 
-```{r}
-glimpse(earthquake_data_trim)
-```
+
 
 ```{r}
 hist(
@@ -151,8 +150,89 @@ train <- earthquake_data_trim[earthquake_data_trim$publicid %in% train_ids,]
 test <- earthquake_data_trim[!earthquake_data_trim$publicid %in% train_ids,]
 
 
-dim(train)
-dim(test)
+#dim(train)
+#dim(test)
+```
+
+## Function for models evaluation
+
+```{r}
+mmi_levels <- levels(train$reported_mmi)
+n_class    <- length(mmi_levels)
+
+# confusion matrix, accuracy, balanced accuracy, recall, AUC multiclass
+eval_summary <- function(pred_class, prob_matrix, actual, model_name) {
+  cm <- table(Predicted = pred_class, Actual = actual)
+  acc <- sum(diag(cm)) / sum(cm)
+  recall <- diag(cm) / colSums(cm)
+  precision <- diag(cm) / rowSums(cm)
+  bal_acc <- mean(recall, na.rm = TRUE)
+
+  cat("----", model_name, "----\n")
+  print(cm)
+  cat("\nAccuracy:", round(acc, 4), "\n")
+  cat("Balanced accuracy (mean recall):", round(bal_acc, 4), "\n")
+  cat("Precision theo từng mức MMI:\n")
+  print(round(precision, 3))
+  cat("Recall theo từng mức MMI:\n")
+  print(round(recall, 3))
+
+  roc_multi <- multiclass.roc(actual, prob_matrix)
+  auc_val <- as.numeric(auc(roc_multi))
+  cat("\nMulticlass AUC (Hand & Till):", round(auc_val, 4), "\n")
+
+  invisible(list(cm = cm, accuracy = acc, balanced_accuracy = bal_acc,
+                 recall = recall, auc = auc_val))
+}
+
+# ROC one-vs-rest 
+plot_ovr_roc <- function(prob_matrix, actual, model_name) {
+  colors <- rainbow(length(mmi_levels))
+  plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1),
+       xlab = "False Positive Rate", ylab = "True Positive Rate",
+       main = paste("One-vs-Rest ROC -", model_name))
+  abline(a = 0, b = 1, lty = 2, col = "gray")
+
+  aucs <- numeric(length(mmi_levels))
+  for (i in seq_along(mmi_levels)) {
+    lvl <- mmi_levels[i]
+    binary_actual <- as.numeric(actual == lvl)
+    roc_obj <- roc(binary_actual, prob_matrix[, lvl], quiet = TRUE)
+    lines(1 - roc_obj$specificities, roc_obj$sensitivities, col = colors[i], lwd = 2)
+    aucs[i] <- auc(roc_obj)
+  }
+
+  legend("bottomright",
+         legend = paste0("MMI ", mmi_levels, " (AUC = ", round(aucs, 2), ")"),
+         col = colors, lwd = 2, cex = 0.6)
+
+  invisible(setNames(aucs, mmi_levels))
+}
+```
+
+Imbalance preparation for all models(stage 1: class weight, stage 2: strata/sampsize for randomForest, stage 3: resampling train dataset).
+
+```{r}
+# Stage 1: 
+
+class_freq <- table(train$reported_mmi)
+class_wt   <- max(class_freq) / class_freq
+class_freq
+class_wt
+
+# Stage 2: min samsize for Random Forest
+min_class_size <- min(class_freq)
+min_class_size
+
+# Stage 3: resample - downsampling as no resource for upsampling
+
+set.seed(1911)
+train_balanced <- downSample(
+  x = train[, c("Mw", "Repi_km", "Rhypo_km", "Rcentroid_km", "ln_Vs30", "fault_style")],
+  y = train$reported_mmi, yname = "reported_mmi"
+)
+
+table(train_balanced$reported_mmi)
 ```
 
 ```{r}
@@ -196,7 +276,7 @@ plot(prune_eq_4)
 text(prune_eq_4, pretty = 0, cex = 0.8)
 ```
 
-Checking trees with cinfusing matrix
+Checking trees with confusing matrix
 
 ```{r}
 prune_2_pred <- predict(prune_eq_2, test, type = 'class')
@@ -216,16 +296,44 @@ prune_4_pred <- predict(prune_eq_4, test, type = 'class')
 table(prune_4_pred, test$reported_mmi)
 ```
 
-Three prune tree share the same confusing matrix. Accuracy is calculated
+Three prune tree share the same confusing matrix. 
+
+ROC tree baseline
 
 ```{r}
-accuracy1 <- sum(diag(table(prune_3_pred, test$reported_mmi))) / sum(table(prune_3_pred, test$reported_mmi))
+prune3_prob <- predict(prune_eq_3, test, type = "vector")
 
-accuracy1
+eval_tree_base <- eval_summary(prune_3_pred, prune3_prob, test$reported_mmi, "Tree (prune, best=3) - baseline")
 ```
 
 ```{r}
-diag(table(prune_3_pred, test$reported_mmi)) / colSums(table(prune_3_pred, test$reported_mmi))
+plot_ovr_roc(prune3_prob, test$reported_mmi, "Tree (prune, best=3) - baseline")
+```
+
+Imbalance treatment Tree
+
+Stage 1 and 2 is not supported, applying Stage 3 `train_balanced`.
+
+```{r}
+set.seed(1911)
+
+tree_balanced <- tree(reported_mmi ~., data = train_balanced)
+
+cv_tree_balanced <- cv.tree(tree_balanced, FUN = prune.misclass, K = 10)
+best_size_bal <- max(cv_tree_balanced$size[which.min(cv_tree_balanced$dev)], 2)
+
+prune_tree_balanced <- prune.misclass(tree_balanced, best = best_size_bal)
+```
+
+```{r}
+pred_tree_bal <- predict(prune_tree_balanced, test, type = "class")
+prob_tree_bal <- predict(prune_tree_balanced, test, type = "vector")
+
+eval_tree_bal <- eval_summary(pred_tree_bal, prob_tree_bal, test$reported_mmi, "Tree - Tier 3 (downsampled train)")
+```
+
+```{r}
+plot_ovr_roc(prob_tree_bal, test$reported_mmi, "Tree - Tier 3 (downsampled train)")
 ```
 
 Not very high, as high as wild guess
@@ -235,13 +343,13 @@ Build tree using library Rpart
 ```{r}
 set.seed(1911)
 
-tree_rpart <- rpart(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2)
+tree_rpart <- rpart(reported_mmi ~., data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2)
 )
 
 tree_rpart$cptable
-plotcp(tree_rpart)
-plot(tree_rpart)
-text(tree_rpart, pretty = 0, cex = 0.8)
+#plotcp(tree_rpart)
+#plot(tree_rpart)
+#text(tree_rpart, pretty = 0, cex = 0.8)
 ```
 
 ```{r}
@@ -264,23 +372,73 @@ rpart_matrix <- table( Predicted = pred_rpart,Actual = test$reported_mmi)
 
 ```
 
+
+
+ROC / AUC Rpart (baseline)
+
 ```{r}
-accuracy2 <- sum(diag(rpart_matrix)) / sum(rpart_matrix)
-accuracy2
+rpart_prob <- predict(prune_rpart, test, type = "prob")
+
+eval_rpart_base <- eval_summary(pred_rpart, rpart_prob, test$reported_mmi, "Rpart - baseline")
 ```
 
 ```{r}
-diag(rpart_matrix) / colSums(rpart_matrix)
+plot_ovr_roc(rpart_prob, test$reported_mmi, "Rpart - baseline")
 ```
 
-Recall seems better but MMI 6 to 8 is unregconizable.
+Imbalance treatment Rpart
+
+Stage 1: 'parms = list(prior = ...)' to set all classes equal when choosing branch."w" means weight
+
+```{r}
+set.seed(1911)
+
+tree_rpart_w <- rpart(reported_mmi ~., data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2), parms = list(prior = rep(1 / n_class, n_class)))
+
+min_cv_w <- which.min(tree_rpart_w$cptable[, "xerror"])
+prune_rpart_w <- prune(tree_rpart_w, cp = tree_rpart_w$cptable[min_cv_w, "CP"])
+```
+
+```{r}
+pred_rpart_w <- predict(prune_rpart_w, test, type = "class")
+prob_rpart_w <- predict(prune_rpart_w, test, type = "prob")
+
+eval_rpart_w <- eval_summary(pred_rpart_w, prob_rpart_w, test$reported_mmi, "Rpart - Tier 1 (class weight/prior)")
+```
+
+```{r}
+plot_ovr_roc(prob_rpart_w, test$reported_mmi, "Rpart - Tier 1 (class weight/prior)")
+```
+
+Stage 2 rpart don't support
+Stage 3:
+
+```{r}
+set.seed(1911)
+
+tree_rpart_bal <- rpart(reported_mmi ~., data = train_balanced, method = "class", control = rpart.control(cp = 0, minsplit = 2))
+
+min_cv_bal <- which.min(tree_rpart_bal$cptable[, "xerror"])
+prune_rpart_bal <- prune(tree_rpart_bal, cp = tree_rpart_bal$cptable[min_cv_bal, "CP"])
+```
+
+```{r}
+pred_rpart_bal <- predict(prune_rpart_bal, test, type = "class")
+prob_rpart_bal <- predict(prune_rpart_bal, test, type = "prob")
+
+eval_rpart_bal <- eval_summary(pred_rpart_bal, prob_rpart_bal, test$reported_mmi, "Rpart - Tier 3 (downsampled train)")
+```
+
+```{r}
+plot_ovr_roc(prob_rpart_bal, test$reported_mmi, "Rpart - Tier 3 (downsampled train)")
+```
 
 Bagging
 
 ```{r}
 set.seed(1911)
 
-bagging <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, data = train, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
+bagging <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
 
 bagging
 ```
@@ -293,20 +451,81 @@ bag_matrix <- table(Predicted = bag_pred, Actual = test$reported_mmi)
 bag_matrix
 ```
 
-```{r}
-accuracy3 <- sum(diag(bag_matrix)) / sum(bag_matrix)
-
-accuracy3
-```
-
-```{r}
-diag(bag_matrix) / colSums(bag_matrix)
-
-```
 
 ```{r}
 importance(bagging, type = 2)
 varImpPlot(bagging, type = 2)
+```
+
+ROC / AUC  Bagging (baseline)
+
+```{r}
+bag_prob <- predict(bagging, test, type = "prob")
+
+eval_bag_base <- eval_summary(bag_pred, bag_prob, test$reported_mmi, "Bagging - baseline")
+```
+
+```{r}
+plot_ovr_roc(bag_prob, test$reported_mmi, "Bagging - baseline")
+```
+
+Imbalance treatment Bagging
+
+Stage 1: 'classwt'
+
+```{r}
+set.seed(1911)
+
+bagging_w <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = 1000, importance = TRUE, classwt = class_wt, do.trace = 100)
+```
+
+```{r}
+bag_pred_w <- predict(bagging_w, test)
+bag_prob_w <- predict(bagging_w, test, type = "prob")
+
+eval_bag_w <- eval_summary(bag_pred_w, bag_prob_w, test$reported_mmi, "Bagging - Tier 1 (class weight)")
+```
+
+```{r}
+plot_ovr_roc(bag_prob_w, test$reported_mmi, "Bagging - Tier 1 (class weight)")
+```
+
+Stage 2: strata/sampsize 
+
+```{r}
+set.seed(1911)
+
+bagging_strata <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = 1000, importance = TRUE, strata = train$reported_mmi, sampsize = rep(min_class_size, n_class), do.trace = 100)
+```
+
+```{r}
+bag_pred_strata <- predict(bagging_strata, test)
+bag_prob_strata <- predict(bagging_strata, test, type = "prob")
+
+eval_bag_strata <- eval_summary(bag_pred_strata, bag_prob_strata, test$reported_mmi, "Bagging - Tier 2 (strata/sampsize)")
+```
+
+```{r}
+plot_ovr_roc(bag_prob_strata, test$reported_mmi, "Bagging - Tier 2 (strata/sampsize)")
+```
+
+Stage 3: resampling `train_balanced`.
+
+```{r}
+set.seed(1911)
+
+bagging_bal <- randomForest(reported_mmi ~., data = train_balanced, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
+```
+
+```{r}
+bag_pred_bal <- predict(bagging_bal, test)
+bag_prob_bal <- predict(bagging_bal, test, type = "prob")
+
+eval_bag_bal <- eval_summary(bag_pred_bal, bag_prob_bal, test$reported_mmi, "Bagging - Tier 3 (downsampled train)")
+```
+
+```{r}
+plot_ovr_roc(bag_prob_bal, test$reported_mmi, "Bagging - Tier 3 (downsampled train)")
 ```
 
 Random forest
@@ -314,7 +533,7 @@ Random forest
 ```{r}
 set.seed(1911)
 
-rf <- randomForest(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, data = train, ntree = 1000, importance = TRUE, do.trace = 100)
+rf <- randomForest(reported_mmi ~., data = train, ntree = 1000, importance = TRUE, do.trace = 100)
 
 rf
 ```
@@ -324,40 +543,86 @@ importance(rf, type = 2)
 varImpPlot(rf, type = 2, main = "Variable Importance - Random Forest")
 ```
 
-```{r}
-rf_pred <- predict(rf, test)
-
-rf_matrix <- table(Predicted = rf_pred, Actual = test$reported_mmi)
-
-rf_matrix
-```
-
-```{r}
-accuracy4 <- sum(diag(rf_matrix)) / sum(rf_matrix)
-
-accuracy4
-```
-
-```{r}
-diag(rf_matrix) / colSums(rf_matrix)
-```
 
 Bagging and random forest have a bit higher accuracy and recall of MMi but still not desirable.
+
+ROC / AUC Random Forest (baseline)
+
+```{r}
+rf_prob <- predict(rf, test, type = "prob")
+
+eval_rf_base <- eval_summary(rf_pred, rf_prob, test$reported_mmi, "Random Forest - baseline")
+```
+
+```{r}
+plot_ovr_roc(rf_prob, test$reported_mmi, "Random Forest - baseline")
+```
+
+Imbalance treatment Random Forest
+
+Stage 1: `classwt`.
+
+```{r}
+set.seed(1911)
+
+rf_w <- randomForest(reported_mmi ~., data = train, ntree = 1000, importance = TRUE, classwt = class_wt, do.trace = 100)
+```
+
+```{r}
+rf_pred_w <- predict(rf_w, test)
+rf_prob_w <- predict(rf_w, test, type = "prob")
+
+eval_rf_w <- eval_summary(rf_pred_w, rf_prob_w, test$reported_mmi, "Random Forest - Tier 1 (class weight)")
+```
+
+```{r}
+plot_ovr_roc(rf_prob_w, test$reported_mmi, "Random Forest - Tier 1 (class weight)")
+```
+
+Stage 2: strata/sampsize
+
+```{r}
+set.seed(1911)
+
+rf_strata <- randomForest(reported_mmi ~., data = train, ntree = 1000, importance = TRUE, strata = train$reported_mmi, sampsize = rep(min_class_size, n_class), do.trace = 100)
+```
+
+```{r}
+rf_pred_strata <- predict(rf_strata, test)
+rf_prob_strata <- predict(rf_strata, test, type = "prob")
+
+eval_rf_strata <- eval_summary(rf_pred_strata, rf_prob_strata, test$reported_mmi, "Random Forest - Tier 2 (strata/sampsize)")
+```
+
+```{r}
+plot_ovr_roc(rf_prob_strata, test$reported_mmi, "Random Forest - Tier 2 (strata/sampsize)")
+```
+
+Stage 3: resampling `train_balanced`.
+
+```{r}
+set.seed(1911)
+
+rf_bal <- randomForest(rreported_mmi ~., data = train_balanced, ntree = 1000, importance = TRUE, do.trace = 100)
+```
+
+```{r}
+rf_pred_bal <- predict(rf_bal, test)
+rf_prob_bal <- predict(rf_bal, test, type = "prob")
+
+eval_rf_bal <- eval_summary(rf_pred_bal, rf_prob_bal, test$reported_mmi, "Random Forest - Tier 3 (downsampled train)")
+```
+
+```{r}
+plot_ovr_roc(rf_prob_bal, test$reported_mmi, "Random Forest - Tier 3 (downsampled train)")
+```
 
 Boosting
 
 ```{r}
 set.seed(1911)
 
-boost <- gbm(reported_mmi ~ Mw + Repi_km + Rhypo_km + Rcentroid_km + ln_Vs30 + fault_style, 
-             data = train, 
-             distribution = "multinomial", 
-             n.trees = 1000, 
-             interaction.depth = 4, 
-             shrinkage = 0.01, 
-             n.minobsinnode = 10,
-             cv.folds = 5,
-             verbose = FALSE)
+boost <- gbm(reported_mmi ~., data = train, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, cv.folds = 5, verbose = FALSE)
 
 summary(boost)
 ```
@@ -382,86 +647,110 @@ boost_matrix <- table(Predicted = boost_pred, Actual = test$reported_mmi)
 boost_matrix
 ```
 
-```{r}
-accuracy5 <- sum(diag(boost_matrix)) / sum(boost_matrix)
 
-accuracy5
+ROC / AUC  Boosting (baseline)
+
+```{r}
+eval_boost_base <- eval_summary(boost_pred, boost_prob, test$reported_mmi, "Boosting - baseline")
 ```
 
 ```{r}
-diag(boost_matrix) / colSums(boost_matrix)
+plot_ovr_roc(boost_prob, test$reported_mmi, "Boosting - baseline")
 ```
 
-ROC and AUC to compare models
+Imbalance treatment Boosting
+
+Stage 1: weight
 
 ```{r}
-prune3_prob <- predict(prune_eq_3, test, type = "vector")
-rpart_prob  <- predict(prune_rpart, test, type = "prob")
-bag_prob    <- predict(bagging, test, type = "prob")
-rf_prob     <- predict(rf, test, type = "prob")
-# boost_prob đã có sẵn từ phần Boosting ở trên (đã drop chiều thừa)
+set.seed(1911)
+
+obs_wt <- 1 / class_freq[as.character(train$reported_mmi)]
+
+boost_w <- gbm(reported_mmi ~., data = train, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, cv.folds = 5, weights = obs_wt, verbose = FALSE)
+
+optimize_boost_w <- gbm.perf(boost_w, method = "OOB")
 ```
 
-AUC multiclass, Hand & Till
+```{r}
+boost_prob_w <- predict(boost_w, test, n.trees = optimize_boost_w, type = "response")
+boost_prob_w <- drop(boost_prob_w)
+
+boost_pred_w <- colnames(boost_prob_w)[max.col(boost_prob_w)]
+boost_pred_w <- factor(boost_pred_w, levels = levels(test$reported_mmi))
+
+eval_boost_w <- eval_summary(boost_pred_w, boost_prob_w, test$reported_mmi, "Boosting - Tier 1 (observation weights)")
+```
 
 ```{r}
-roc_prune3 <- multiclass.roc(test$reported_mmi, prune3_prob)
-roc_rpart  <- multiclass.roc(test$reported_mmi, rpart_prob)
-roc_bag    <- multiclass.roc(test$reported_mmi, bag_prob)
-roc_rf     <- multiclass.roc(test$reported_mmi, rf_prob)
-roc_boost  <- multiclass.roc(test$reported_mmi, boost_prob)
+plot_ovr_roc(boost_prob_w, test$reported_mmi, "Boosting - Tier 1 (observation weights)")
+```
 
-auc_table <- data.frame(Model = c("Pruned tree (best = 3)", "Rpart", "Bagging", "Random Forest", "Boosting"), AUC = c(auc(roc_prune3), auc(roc_rpart), auc(roc_bag), auc(roc_rf), auc(roc_boost))
+Stage 2 dont support go to Stage 3.
+
+```{r}
+set.seed(1911)
+
+boost_bal <- gbm(reported_mmi ~., data = train_balanced, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, cv.folds = 5, verbose = FALSE)
+
+optimize_boost_bal <- gbm.perf(boost_bal, method = "OOB")
+```
+
+```{r}
+boost_prob_bal <- predict(boost_bal, test, n.trees = optimize_boost_bal, type = "response")
+boost_prob_bal <- drop(boost_prob_bal)
+
+boost_pred_bal <- colnames(boost_prob_bal)[max.col(boost_prob_bal)]
+boost_pred_bal <- factor(boost_pred_bal, levels = levels(test$reported_mmi))
+
+eval_boost_bal <- eval_summary(boost_pred_bal, boost_prob_bal, test$reported_mmi, "Boosting - Tier 3 (downsampled train)")
+```
+
+```{r}
+plot_ovr_roc(boost_prob_bal, test$reported_mmi, "Boosting - Tier 3 (downsampled train)")
+```
+
+Combining table of result
+
+```{r}
+summary_table <- data.frame(
+  Model = c(
+    "Tree - baseline", "Tree - Tier 3",
+    "Rpart - baseline", "Rpart - Tier 1", "Rpart - Tier 3",
+    "Bagging - baseline", "Bagging - Tier 1", "Bagging - Tier 2", "Bagging - Tier 3",
+    "Random Forest - baseline", "Random Forest - Tier 1", "Random Forest - Tier 2", "Random Forest - Tier 3",
+    "Boosting - baseline", "Boosting - Tier 1", "Boosting - Tier 3"
+  ),
+  Accuracy = c(
+    eval_tree_base$accuracy, eval_tree_bal$accuracy,
+    eval_rpart_base$accuracy, eval_rpart_w$accuracy, eval_rpart_bal$accuracy,
+    eval_bag_base$accuracy, eval_bag_w$accuracy, eval_bag_strata$accuracy, eval_bag_bal$accuracy,
+    eval_rf_base$accuracy, eval_rf_w$accuracy, eval_rf_strata$accuracy, eval_rf_bal$accuracy,
+    eval_boost_base$accuracy, eval_boost_w$accuracy, eval_boost_bal$accuracy
+  ),
+  Balanced_Accuracy = c(
+    eval_tree_base$balanced_accuracy, eval_tree_bal$balanced_accuracy,
+    eval_rpart_base$balanced_accuracy, eval_rpart_w$balanced_accuracy, eval_rpart_bal$balanced_accuracy,
+    eval_bag_base$balanced_accuracy, eval_bag_w$balanced_accuracy, eval_bag_strata$balanced_accuracy, eval_bag_bal$balanced_accuracy,
+    eval_rf_base$balanced_accuracy, eval_rf_w$balanced_accuracy, eval_rf_strata$balanced_accuracy, eval_rf_bal$balanced_accuracy,
+    eval_boost_base$balanced_accuracy, eval_boost_w$balanced_accuracy, eval_boost_bal$balanced_accuracy
+  ),
+    Macro_Precision = c(
+      mean(eval_tree_base$precision, na.rm = TRUE), mean(eval_tree_bal$precision, na.rm = TRUE),
+      mean(eval_rpart_base$precision, na.rm = TRUE), mean(eval_rpart_w$precision, na.rm = TRUE), mean(eval_rpart_bal$precision, na.rm = TRUE),
+      mean(eval_bag_base$precision, na.rm = TRUE), mean(eval_bag_w$precision, na.rm = TRUE), mean(eval_bag_strata$precision, na.rm = TRUE), mean(eval_bag_bal$precision, na.rm = TRUE),
+      mean(eval_rf_base$precision, na.rm = TRUE), mean(eval_rf_w$precision, na.rm = TRUE), mean(eval_rf_strata$precision, na.rm = TRUE), mean(eval_rf_bal$precision, na.rm = TRUE),
+      mean(eval_boost_base$precision, na.rm = TRUE), mean(eval_boost_w$precision, na.rm = TRUE), mean(eval_boost_bal$precision, na.rm = TRUE)
+  ),
+  AUC = c(
+    eval_tree_base$auc, eval_tree_bal$auc,
+    eval_rpart_base$auc, eval_rpart_w$auc, eval_rpart_bal$auc,
+    eval_bag_base$auc, eval_bag_w$auc, eval_bag_strata$auc, eval_bag_bal$auc,
+    eval_rf_base$auc, eval_rf_w$auc, eval_rf_strata$auc, eval_rf_bal$auc,
+    eval_boost_base$auc, eval_boost_w$auc, eval_boost_bal$auc
+  )
 )
 
-auc_table[order(-auc_table$AUC), ]
+summary_table[order(-summary_table$Balanced_Accuracy), ]
 ```
 
-ROC of one MMI level comparing the rest level to see if it is distinguishable by each model
-
-```{r}
-mmi_levels <- levels(test$reported_mmi)
-
-plot_ovr_roc <- function(prob_matrix, actual, model_name) {
-  colors <- rainbow(length(mmi_levels))
-  plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1),
-       xlab = "False Positive Rate", ylab = "True Positive Rate",
-       main = paste("One-vs-Rest ROC -", model_name))
-  abline(a = 0, b = 1, lty = 2, col = "gray")
-
-  aucs <- numeric(length(mmi_levels))
-  for (i in seq_along(mmi_levels)) {
-    lvl <- mmi_levels[i]
-    binary_actual <- as.numeric(actual == lvl)
-    roc_obj <- roc(binary_actual, prob_matrix[, lvl], quiet = TRUE)
-    lines(1 - roc_obj$specificities, roc_obj$sensitivities, col = colors[i], lwd = 2)
-    aucs[i] <- auc(roc_obj)
-  }
-
-  legend("bottomright",
-         legend = paste0("MMI ", mmi_levels, " (AUC = ", round(aucs, 2), ")"),
-         col = colors, lwd = 2, cex = 0.6)
-
-  invisible(setNames(aucs, mmi_levels))
-}
-```
-
-```{r}
-plot_ovr_roc(prune3_prob, test$reported_mmi, "Pruned tree (best = 3)")
-```
-
-```{r}
-plot_ovr_roc(rpart_prob, test$reported_mmi, "Rpart")
-```
-
-```{r}
-plot_ovr_roc(bag_prob, test$reported_mmi, "Bagging")
-```
-
-```{r}
-plot_ovr_roc(rf_prob, test$reported_mmi, "Random Forest")
-```
-
-```{r}
-plot_ovr_roc(boost_prob, test$reported_mmi, "Boosting")
-```
