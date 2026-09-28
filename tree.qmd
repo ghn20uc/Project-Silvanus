@@ -100,8 +100,6 @@ earthquake_data_trim$fault_style[is.na(earthquake_data_trim$fault_style)] <- "un
 earthquake_data_trim$fault_style <- factor(earthquake_data_trim$fault_style)
 ```
 
-
-
 ```{r}
 hist(
   earthquake_data_trim$Vs30_m_s,
@@ -148,6 +146,10 @@ train_ids <- sample(publicids, size = floor(0.8 * length(publicids)))
 train <- earthquake_data_trim[earthquake_data_trim$publicid %in% train_ids,]
 
 test <- earthquake_data_trim[!earthquake_data_trim$publicid %in% train_ids,]
+
+# publicid chỉ dùng để chia train/test theo trận động đất, KHÔNG đưa vào làm biến dự đoán
+train$publicid <- NULL
+test$publicid  <- NULL
 
 
 #dim(train)
@@ -219,6 +221,10 @@ class_freq <- table(train$reported_mmi)
 class_wt   <- max(class_freq) / class_freq
 class_freq
 class_wt
+
+# Tham số dùng chung cho mọi randomForest/bagging (chỉnh 1 chỗ)
+rf_ntree    <- 500   # OOB error thường đã ổn định trước 500 cây
+rf_nodesize <- 5     # mặc định 1 = cây mọc tới lá thuần, rất chậm; 5-10 nhanh hơn nhiều
 
 # Stage 2: min samsize for Random Forest
 min_class_size <- min(class_freq)
@@ -296,7 +302,7 @@ prune_4_pred <- predict(prune_eq_4, test, type = 'class')
 table(prune_4_pred, test$reported_mmi)
 ```
 
-Three prune tree share the same confusing matrix. 
+Three prune tree share the same confusing matrix.
 
 ROC tree baseline
 
@@ -343,7 +349,7 @@ Build tree using library Rpart
 ```{r}
 set.seed(1911)
 
-tree_rpart <- rpart(reported_mmi ~., data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2)
+tree_rpart <- rpart(reported_mmi ~., data = train, method = "class", control = rpart.control(cp = 1e-5, minsplit = 20, xval = 5)
 )
 
 tree_rpart$cptable
@@ -372,8 +378,6 @@ rpart_matrix <- table( Predicted = pred_rpart,Actual = test$reported_mmi)
 
 ```
 
-
-
 ROC / AUC Rpart (baseline)
 
 ```{r}
@@ -393,7 +397,7 @@ Stage 1: 'parms = list(prior = ...)' to set all classes equal when choosing bran
 ```{r}
 set.seed(1911)
 
-tree_rpart_w <- rpart(reported_mmi ~., data = train, method = "class", control = rpart.control(cp = 0, minsplit = 2), parms = list(prior = rep(1 / n_class, n_class)))
+tree_rpart_w <- rpart(reported_mmi ~., data = train, method = "class", control = rpart.control(cp = 1e-5, minsplit = 20, xval = 5), parms = list(prior = rep(1 / n_class, n_class)))
 
 min_cv_w <- which.min(tree_rpart_w$cptable[, "xerror"])
 prune_rpart_w <- prune(tree_rpart_w, cp = tree_rpart_w$cptable[min_cv_w, "CP"])
@@ -410,13 +414,12 @@ eval_rpart_w <- eval_summary(pred_rpart_w, prob_rpart_w, test$reported_mmi, "Rpa
 plot_ovr_roc(prob_rpart_w, test$reported_mmi, "Rpart - Tier 1 (class weight/prior)")
 ```
 
-Stage 2 rpart don't support
-Stage 3:
+Stage 2 rpart don't support Stage 3:
 
 ```{r}
 set.seed(1911)
 
-tree_rpart_bal <- rpart(reported_mmi ~., data = train_balanced, method = "class", control = rpart.control(cp = 0, minsplit = 2))
+tree_rpart_bal <- rpart(reported_mmi ~., data = train_balanced, method = "class", control = rpart.control(cp = 1e-5, minsplit = 20, xval = 5))
 
 min_cv_bal <- which.min(tree_rpart_bal$cptable[, "xerror"])
 prune_rpart_bal <- prune(tree_rpart_bal, cp = tree_rpart_bal$cptable[min_cv_bal, "CP"])
@@ -438,7 +441,7 @@ Bagging
 ```{r}
 set.seed(1911)
 
-bagging <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
+bagging <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = rf_ntree, nodesize = rf_nodesize, do.trace = 100)
 
 bagging
 ```
@@ -451,13 +454,12 @@ bag_matrix <- table(Predicted = bag_pred, Actual = test$reported_mmi)
 bag_matrix
 ```
 
-
 ```{r}
 importance(bagging, type = 2)
 varImpPlot(bagging, type = 2)
 ```
 
-ROC / AUC  Bagging (baseline)
+ROC / AUC Bagging (baseline)
 
 ```{r}
 bag_prob <- predict(bagging, test, type = "prob")
@@ -476,7 +478,7 @@ Stage 1: 'classwt'
 ```{r}
 set.seed(1911)
 
-bagging_w <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = 1000, importance = TRUE, classwt = class_wt, do.trace = 100)
+bagging_w <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = rf_ntree, nodesize = rf_nodesize, classwt = class_wt, do.trace = 100)
 ```
 
 ```{r}
@@ -490,12 +492,12 @@ eval_bag_w <- eval_summary(bag_pred_w, bag_prob_w, test$reported_mmi, "Bagging -
 plot_ovr_roc(bag_prob_w, test$reported_mmi, "Bagging - Tier 1 (class weight)")
 ```
 
-Stage 2: strata/sampsize 
+Stage 2: strata/sampsize
 
 ```{r}
 set.seed(1911)
 
-bagging_strata <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = 1000, importance = TRUE, strata = train$reported_mmi, sampsize = rep(min_class_size, n_class), do.trace = 100)
+bagging_strata <- randomForest(reported_mmi ~., data = train, mtry = 6, ntree = rf_ntree, nodesize = rf_nodesize, strata = train$reported_mmi, sampsize = rep(min_class_size, n_class), do.trace = 100)
 ```
 
 ```{r}
@@ -514,7 +516,7 @@ Stage 3: resampling `train_balanced`.
 ```{r}
 set.seed(1911)
 
-bagging_bal <- randomForest(reported_mmi ~., data = train_balanced, mtry = 6, ntree = 1000, importance = TRUE, do.trace = 100)
+bagging_bal <- randomForest(reported_mmi ~., data = train_balanced, mtry = 6, ntree = rf_ntree, nodesize = rf_nodesize, do.trace = 100)
 ```
 
 ```{r}
@@ -533,7 +535,7 @@ Random forest
 ```{r}
 set.seed(1911)
 
-rf <- randomForest(reported_mmi ~., data = train, ntree = 1000, importance = TRUE, do.trace = 100)
+rf <- randomForest(reported_mmi ~., data = train, ntree = rf_ntree, nodesize = rf_nodesize, do.trace = 100)
 
 rf
 ```
@@ -543,8 +545,15 @@ importance(rf, type = 2)
 varImpPlot(rf, type = 2, main = "Variable Importance - Random Forest")
 ```
 
-
 Bagging and random forest have a bit higher accuracy and recall of MMi but still not desirable.
+
+```{r}
+rf_pred <- predict(rf, test)
+
+rf_matrix <- table(Predicted = rf_pred, Actual = test$reported_mmi)
+
+rf_matrix
+```
 
 ROC / AUC Random Forest (baseline)
 
@@ -565,7 +574,7 @@ Stage 1: `classwt`.
 ```{r}
 set.seed(1911)
 
-rf_w <- randomForest(reported_mmi ~., data = train, ntree = 1000, importance = TRUE, classwt = class_wt, do.trace = 100)
+rf_w <- randomForest(reported_mmi ~., data = train, ntree = rf_ntree, nodesize = rf_nodesize, classwt = class_wt, do.trace = 100)
 ```
 
 ```{r}
@@ -584,7 +593,7 @@ Stage 2: strata/sampsize
 ```{r}
 set.seed(1911)
 
-rf_strata <- randomForest(reported_mmi ~., data = train, ntree = 1000, importance = TRUE, strata = train$reported_mmi, sampsize = rep(min_class_size, n_class), do.trace = 100)
+rf_strata <- randomForest(reported_mmi ~., data = train, ntree = rf_ntree, nodesize = rf_nodesize, strata = train$reported_mmi, sampsize = rep(min_class_size, n_class), do.trace = 100)
 ```
 
 ```{r}
@@ -603,7 +612,7 @@ Stage 3: resampling `train_balanced`.
 ```{r}
 set.seed(1911)
 
-rf_bal <- randomForest(rreported_mmi ~., data = train_balanced, ntree = 1000, importance = TRUE, do.trace = 100)
+rf_bal <- randomForest(reported_mmi ~., data = train_balanced, ntree = rf_ntree, nodesize = rf_nodesize, do.trace = 100)
 ```
 
 ```{r}
@@ -622,7 +631,7 @@ Boosting
 ```{r}
 set.seed(1911)
 
-boost <- gbm(reported_mmi ~., data = train, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, cv.folds = 5, verbose = FALSE)
+boost <- gbm(reported_mmi ~., data = train, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, verbose = FALSE)
 
 summary(boost)
 ```
@@ -647,8 +656,7 @@ boost_matrix <- table(Predicted = boost_pred, Actual = test$reported_mmi)
 boost_matrix
 ```
 
-
-ROC / AUC  Boosting (baseline)
+ROC / AUC Boosting (baseline)
 
 ```{r}
 eval_boost_base <- eval_summary(boost_pred, boost_prob, test$reported_mmi, "Boosting - baseline")
@@ -667,7 +675,7 @@ set.seed(1911)
 
 obs_wt <- 1 / class_freq[as.character(train$reported_mmi)]
 
-boost_w <- gbm(reported_mmi ~., data = train, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, cv.folds = 5, weights = obs_wt, verbose = FALSE)
+boost_w <- gbm(reported_mmi ~., data = train, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, weights = obs_wt, verbose = FALSE)
 
 optimize_boost_w <- gbm.perf(boost_w, method = "OOB")
 ```
@@ -691,7 +699,7 @@ Stage 2 dont support go to Stage 3.
 ```{r}
 set.seed(1911)
 
-boost_bal <- gbm(reported_mmi ~., data = train_balanced, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, cv.folds = 5, verbose = FALSE)
+boost_bal <- gbm(reported_mmi ~., data = train_balanced, distribution = "multinomial", n.trees = 1000, interaction.depth = 4, shrinkage = 0.01, n.minobsinnode = 10, verbose = FALSE)
 
 optimize_boost_bal <- gbm.perf(boost_bal, method = "OOB")
 ```
@@ -715,11 +723,11 @@ Combining table of result
 ```{r}
 summary_table <- data.frame(
   Model = c(
-    "Tree - baseline", "Tree - Tier 3",
-    "Rpart - baseline", "Rpart - Tier 1", "Rpart - Tier 3",
-    "Bagging - baseline", "Bagging - Tier 1", "Bagging - Tier 2", "Bagging - Tier 3",
-    "Random Forest - baseline", "Random Forest - Tier 1", "Random Forest - Tier 2", "Random Forest - Tier 3",
-    "Boosting - baseline", "Boosting - Tier 1", "Boosting - Tier 3"
+    "Tree - baseline", "Tree - Stage 3",
+    "Rpart - baseline", "Rpart - Stage 1", "Rpart - Stage 3",
+    "Bagging - baseline", "Bagging - Stage 1", "Bagging - Stage 2", "Bagging - Stage 3",
+    "Random Forest - baseline", "Random Forest - Stage 1", "Random Forest - Stage 2", "Random Forest - Stag 3",
+    "Boosting - baseline", "Boosting - Stage 1", "Boosting - Stage 3"
   ),
   Accuracy = c(
     eval_tree_base$accuracy, eval_tree_bal$accuracy,
@@ -753,4 +761,3 @@ summary_table <- data.frame(
 
 summary_table[order(-summary_table$Balanced_Accuracy), ]
 ```
-
