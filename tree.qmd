@@ -162,29 +162,29 @@ test$publicid  <- NULL
 mmi_levels <- levels(train$reported_mmi)
 n_class    <- length(mmi_levels)
 
-# confusion matrix, accuracy, balanced accuracy, recall, AUC multiclass
+# confusion matrix, accuracy, balanced accuracy, precision, recall, F1, AUC multiclass
 eval_summary <- function(pred_class, prob_matrix, actual, model_name) {
   cm <- table(Predicted = pred_class, Actual = actual)
   acc <- sum(diag(cm)) / sum(cm)
-  recall <- diag(cm) / colSums(cm)
-  precision <- diag(cm) / rowSums(cm)
-  bal_acc <- mean(recall, na.rm = TRUE)
-
+  recall    <- diag(cm) / colSums(cm)                     
+  precision <- diag(cm) / rowSums(cm)                      
+  f1        <- 2 * precision * recall / (precision + recall)  
+  
   cat("----", model_name, "----\n")
   print(cm)
   cat("\nAccuracy:", round(acc, 4), "\n")
-  cat("Balanced accuracy (mean recall):", round(bal_acc, 4), "\n")
-  cat("Precision theo từng mức MMI:\n")
+  cat("\nPrecision per MMI:\n")
   print(round(precision, 3))
-  cat("Recall theo từng mức MMI:\n")
+  cat("Recall per MMI:\n")
   print(round(recall, 3))
-
+  cat("F1 per MMI:\n")
+  print(round(f1, 3))
+  
   roc_multi <- multiclass.roc(actual, prob_matrix)
   auc_val <- as.numeric(auc(roc_multi))
   cat("\nMulticlass AUC (Hand & Till):", round(auc_val, 4), "\n")
-
-  invisible(list(cm = cm, accuracy = acc, balanced_accuracy = bal_acc,
-                 recall = recall, auc = auc_val))
+  
+  invisible(list(cm = cm, accuracy = acc, precision = precision, recall = recall, f1 = f1, auc = auc_val))
 }
 
 # ROC one-vs-rest 
@@ -222,9 +222,9 @@ class_wt   <- max(class_freq) / class_freq
 class_freq
 class_wt
 
-# Tham số dùng chung cho mọi randomForest/bagging (chỉnh 1 chỗ)
-rf_ntree    <- 500   # OOB error thường đã ổn định trước 500 cây
-rf_nodesize <- 5     # mặc định 1 = cây mọc tới lá thuần, rất chậm; 5-10 nhanh hơn nhiều
+
+rf_ntree    <- 500   
+rf_nodesize <- 5    
 
 # Stage 2: min samsize for Random Forest
 min_class_size <- min(class_freq)
@@ -723,11 +723,11 @@ Combining table of result
 ```{r}
 summary_table <- data.frame(
   Model = c(
-    "Tree - baseline", "Tree - Stage 3",
-    "Rpart - baseline", "Rpart - Stage 1", "Rpart - Stage 3",
-    "Bagging - baseline", "Bagging - Stage 1", "Bagging - Stage 2", "Bagging - Stage 3",
-    "Random Forest - baseline", "Random Forest - Stage 1", "Random Forest - Stage 2", "Random Forest - Stag 3",
-    "Boosting - baseline", "Boosting - Stage 1", "Boosting - Stage 3"
+    "Tree - baseline", "Tree - Tier 3",
+    "Rpart - baseline", "Rpart - Tier 1", "Rpart - Tier 3",
+    "Bagging - baseline", "Bagging - Tier 1", "Bagging - Tier 2", "Bagging - Tier 3",
+    "Random Forest - baseline", "Random Forest - Tier 1", "Random Forest - Tier 2", "Random Forest - Tier 3",
+    "Boosting - baseline", "Boosting - Tier 1", "Boosting - Tier 3"
   ),
   Accuracy = c(
     eval_tree_base$accuracy, eval_tree_bal$accuracy,
@@ -736,19 +736,26 @@ summary_table <- data.frame(
     eval_rf_base$accuracy, eval_rf_w$accuracy, eval_rf_strata$accuracy, eval_rf_bal$accuracy,
     eval_boost_base$accuracy, eval_boost_w$accuracy, eval_boost_bal$accuracy
   ),
-  Balanced_Accuracy = c(
-    eval_tree_base$balanced_accuracy, eval_tree_bal$balanced_accuracy,
-    eval_rpart_base$balanced_accuracy, eval_rpart_w$balanced_accuracy, eval_rpart_bal$balanced_accuracy,
-    eval_bag_base$balanced_accuracy, eval_bag_w$balanced_accuracy, eval_bag_strata$balanced_accuracy, eval_bag_bal$balanced_accuracy,
-    eval_rf_base$balanced_accuracy, eval_rf_w$balanced_accuracy, eval_rf_strata$balanced_accuracy, eval_rf_bal$balanced_accuracy,
-    eval_boost_base$balanced_accuracy, eval_boost_w$balanced_accuracy, eval_boost_bal$balanced_accuracy
+  Precision = c(
+    mean(eval_tree_base$precision, na.rm = TRUE), mean(eval_tree_bal$precision, na.rm = TRUE),
+    mean(eval_rpart_base$precision, na.rm = TRUE), mean(eval_rpart_w$precision, na.rm = TRUE), mean(eval_rpart_bal$precision, na.rm = TRUE),
+    mean(eval_bag_base$precision, na.rm = TRUE), mean(eval_bag_w$precision, na.rm = TRUE), mean(eval_bag_strata$precision, na.rm = TRUE), mean(eval_bag_bal$precision, na.rm = TRUE),
+    mean(eval_rf_base$precision, na.rm = TRUE), mean(eval_rf_w$precision, na.rm = TRUE), mean(eval_rf_strata$precision, na.rm = TRUE), mean(eval_rf_bal$precision, na.rm = TRUE),
+    mean(eval_boost_base$precision, na.rm = TRUE), mean(eval_boost_w$precision, na.rm = TRUE), mean(eval_boost_bal$precision, na.rm = TRUE)
   ),
-    Macro_Precision = c(
-      mean(eval_tree_base$precision, na.rm = TRUE), mean(eval_tree_bal$precision, na.rm = TRUE),
-      mean(eval_rpart_base$precision, na.rm = TRUE), mean(eval_rpart_w$precision, na.rm = TRUE), mean(eval_rpart_bal$precision, na.rm = TRUE),
-      mean(eval_bag_base$precision, na.rm = TRUE), mean(eval_bag_w$precision, na.rm = TRUE), mean(eval_bag_strata$precision, na.rm = TRUE), mean(eval_bag_bal$precision, na.rm = TRUE),
-      mean(eval_rf_base$precision, na.rm = TRUE), mean(eval_rf_w$precision, na.rm = TRUE), mean(eval_rf_strata$precision, na.rm = TRUE), mean(eval_rf_bal$precision, na.rm = TRUE),
-      mean(eval_boost_base$precision, na.rm = TRUE), mean(eval_boost_w$precision, na.rm = TRUE), mean(eval_boost_bal$precision, na.rm = TRUE)
+  Recall = c(
+    mean(eval_tree_base$recall, na.rm = TRUE), mean(eval_tree_bal$recall, na.rm = TRUE),
+    mean(eval_rpart_base$recall, na.rm = TRUE), mean(eval_rpart_w$recall, na.rm = TRUE), mean(eval_rpart_bal$recall, na.rm = TRUE),
+    mean(eval_bag_base$recall, na.rm = TRUE), mean(eval_bag_w$recall, na.rm = TRUE), mean(eval_bag_strata$recall, na.rm = TRUE), mean(eval_bag_bal$recall, na.rm = TRUE),
+    mean(eval_rf_base$recall, na.rm = TRUE), mean(eval_rf_w$recall, na.rm = TRUE), mean(eval_rf_strata$recall, na.rm = TRUE), mean(eval_rf_bal$recall, na.rm = TRUE),
+    mean(eval_boost_base$recall, na.rm = TRUE), mean(eval_boost_w$recall, na.rm = TRUE), mean(eval_boost_bal$recall, na.rm = TRUE)
+  ),
+  F1 = c(
+    mean(eval_tree_base$f1, na.rm = TRUE), mean(eval_tree_bal$f1, na.rm = TRUE),
+    mean(eval_rpart_base$f1, na.rm = TRUE), mean(eval_rpart_w$f1, na.rm = TRUE), mean(eval_rpart_bal$f1, na.rm = TRUE),
+    mean(eval_bag_base$f1, na.rm = TRUE), mean(eval_bag_w$f1, na.rm = TRUE), mean(eval_bag_strata$f1, na.rm = TRUE), mean(eval_bag_bal$f1, na.rm = TRUE),
+    mean(eval_rf_base$f1, na.rm = TRUE), mean(eval_rf_w$f1, na.rm = TRUE), mean(eval_rf_strata$f1, na.rm = TRUE), mean(eval_rf_bal$f1, na.rm = TRUE),
+    mean(eval_boost_base$f1, na.rm = TRUE), mean(eval_boost_w$f1, na.rm = TRUE), mean(eval_boost_bal$f1, na.rm = TRUE)
   ),
   AUC = c(
     eval_tree_base$auc, eval_tree_bal$auc,
@@ -759,5 +766,94 @@ summary_table <- data.frame(
   )
 )
 
-summary_table[order(-summary_table$Balanced_Accuracy), ]
+summary_table[order(-summary_table$Recall), ]
+```
+
+```{r}
+library(gridExtra)
+
+dir.create("report_images", showWarnings = FALSE)
+
+# 1. Table summary
+summary_rounded <- summary_table[order(-summary_table$Recall), ]
+summary_rounded[, -1] <- round(summary_rounded[, -1], 4)
+
+png("report_images/01_bang_tong_hop.png", width = 1600, height = 700, res = 150)
+grid.arrange(tableGrob(summary_rounded, rows = NULL))
+dev.off()
+
+# 2. barplot
+png("report_images/02_barplot_so_sanh.png", width = 1800, height = 800, res = 130)
+
+metrics_matrix <- t(as.matrix(summary_table[, c("Accuracy", "Precision", "Recall", "F1", "AUC")]))
+colnames(metrics_matrix) <- summary_table$Model
+
+barplot(metrics_matrix, beside = TRUE,
+        col = c("steelblue", "darkgreen", "purple", "orange", "goldenrod"),
+        las = 2, cex.names = 0.6, ylim = c(0, 1.15),
+        main = "Accuracy / Precision / Recall / F1 / AUC",
+        legend.text = TRUE,
+        args.legend = list(x = "top", horiz = TRUE, cex = 0.65, bty = "n"))
+
+dev.off()
+
+# 3. 16 ROC one-vs-rest
+png("report_images/03_roc_grid.png", width = 1800, height = 1800, res = 130)
+
+prob_list <- list(
+  "Tree - baseline" = prune3_prob, "Tree - Tier 3" = prob_tree_bal,
+  "Rpart - baseline" = rpart_prob, "Rpart - Tier 1" = prob_rpart_w, "Rpart - Tier 3" = prob_rpart_bal,
+  "Bagging - baseline" = bag_prob, "Bagging - Tier 1" = bag_prob_w, "Bagging - Tier 2" = bag_prob_strata, "Bagging - Tier 3" = bag_prob_bal,
+  "Random Forest - baseline" = rf_prob, "Random Forest - Tier 1" = rf_prob_w, "Random Forest - Tier 2" = rf_prob_strata, "Random Forest - Tier 3" = rf_prob_bal,
+  "Boosting - baseline" = boost_prob, "Boosting - Tier 1" = boost_prob_w, "Boosting - Tier 3" = boost_prob_bal
+)
+
+all_eval <- list(
+  "Tree - baseline" = eval_tree_base, "Tree - Tier 3" = eval_tree_bal,
+  "Rpart - baseline" = eval_rpart_base, "Rpart - Tier 1" = eval_rpart_w, "Rpart - Tier 3" = eval_rpart_bal,
+  "Bagging - baseline" = eval_bag_base, "Bagging - Tier 1" = eval_bag_w, "Bagging - Tier 2" = eval_bag_strata, "Bagging - Tier 3" = eval_bag_bal,
+  "Random Forest - baseline" = eval_rf_base, "Random Forest - Tier 1" = eval_rf_w, "Random Forest - Tier 2" = eval_rf_strata, "Random Forest - Tier 3" = eval_rf_bal,
+  "Boosting - baseline" = eval_boost_base, "Boosting - Tier 1" = eval_boost_w, "Boosting - Tier 3" = eval_boost_bal
+)
+par(mfrow = c(4, 4), mar = c(3, 3, 2, 1))
+for (nm in names(prob_list)) {
+  plot_ovr_roc(prob_list[[nm]], test$reported_mmi, nm)
+}
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
+
+dev.off()
+
+# 4. Confusion matrix
+dir.create("report_images/confusion_matrices", showWarnings = FALSE)
+
+for (nm in names(all_eval)) {
+  file_name <- paste0("report_images/confusion_matrices/", gsub("[^A-Za-z0-9]", "_", nm), ".png")
+  cm_df <- as.data.frame.matrix(all_eval[[nm]]$cm)
+  
+  png(file_name, width = 900, height = 650, res = 130)
+  grid.arrange(tableGrob(cm_df), top = nm)
+  dev.off()
+}
+
+# 5. Precision / Recall / F1 
+dir.create("report_images/metrics_tables", showWarnings = FALSE)
+
+for (nm in names(all_eval)) {
+  ev <- all_eval[[nm]]
+  file_name <- paste0("report_images/metrics_tables/", gsub("[^A-Za-z0-9]", "_", nm), "_metrics.png")
+  
+  metrics_df <- data.frame(
+    MMI       = names(ev$recall),
+    Precision = round(ev$precision, 3),
+    Recall    = round(ev$recall, 3),
+    F1        = round(ev$f1, 3),
+    row.names = NULL
+  )
+  
+  png(file_name, width = 800, height = 500, res = 130)
+  grid.arrange(tableGrob(metrics_df, rows = NULL), top = nm)
+  dev.off()
+}
+
+cat("Xong. File nằm trong thư mục:", normalizePath("report_images"), "\n")
 ```
