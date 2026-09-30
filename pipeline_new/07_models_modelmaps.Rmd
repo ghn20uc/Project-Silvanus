@@ -159,6 +159,19 @@ cat("\n")
 
 anova(model_mem_1, model_mem_2, model_mem_3, model_mem_4)
 ```
+```{r}
+model_mem_5 <- lmer(
+  log(reported_mmi) ~ Rhypo_km + Mw + Vs30_raw + (1 + Rhypo_km | publicid),
+  data = data_sd,
+  REML = FALSE
+)
+
+summary(model_mem_5)
+
+anova(model_mem_3, model_mem_5)
+```
+
+
 
 ```{r}
 data_sd |>
@@ -193,7 +206,7 @@ nzmap <- st_read("nzmap/regional-council-2025-clipped.gpkg")
 
 ```{r}
 # Choose earthquake
-earthquake_id <- "2016p858055"
+earthquake_id <- "2020p066075"
 
 
 # Get data for selected earthquake
@@ -204,7 +217,7 @@ eq_data <- data_sd |>
 # Predicted MMI at actual Felt RAPID locations
 eq_data$predicted_mmi <- exp(
   predict(
-    model_mem_3,
+    model_mem_5,
     newdata = eq_data,
     re.form = NULL
   )
@@ -271,7 +284,7 @@ prediction_data <- tibble(
 # Predict MMI
 prediction_data$predicted_mmi <- exp(
   predict(
-    model_mem_3,
+    model_mem_5,
     newdata = prediction_data,
     re.form = NULL
   )
@@ -557,7 +570,7 @@ prediction_data <- tibble(
 # with no known earthquake-specific random effect
 prediction_data$predicted_mmi <- exp(
   predict(
-    model_mem_3,
+    model_mem_5,
     newdata = prediction_data,
     re.form = NA
   )
