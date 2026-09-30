@@ -165,8 +165,25 @@ data_sd |>
   filter(!is.na(reported_mmi)) |>
   count(publicid, name = "reported_mmi_count") |>
   arrange(desc(reported_mmi_count)) |>
-  slice_head(n = 5)
+  slice_head(n = 10)
 
+```
+```{r}
+high_mmi_earthquakes <- data_sd |>
+  filter(reported_mmi %in% c(6, 7, 8)) |>
+  group_by(publicid) |>
+  summarise(
+    mmi_6 = sum(reported_mmi == 6),
+    mmi_7 = sum(reported_mmi == 7),
+    mmi_8 = sum(reported_mmi == 8),
+    total_6_7_8 = sum(reported_mmi %in% c(6, 7, 8)),
+    Mw = first(Mw),
+    event_depth_km = first(event_depth_km),
+    .groups = "drop"
+  ) |>
+  arrange(desc(total_6_7_8))
+
+high_mmi_earthquakes
 ```
 
 ```{r}
@@ -176,7 +193,7 @@ nzmap <- st_read("nzmap/regional-council-2025-clipped.gpkg")
 
 ```{r}
 # Choose earthquake
-earthquake_id <- "2021p169083"
+earthquake_id <- "2016p858055"
 
 
 # Get data for selected earthquake
