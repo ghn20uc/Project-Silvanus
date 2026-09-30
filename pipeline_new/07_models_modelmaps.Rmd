@@ -183,10 +183,8 @@ earthquake_id <- "2021p169083"
 eq_data <- data_sd |>
   filter(publicid == earthquake_id)
 
-# Predicted MMI at actual Felt RAPID locations
-#
-# re.form = NULL includes the random effect for this earthquake
 
+# Predicted MMI at actual Felt RAPID locations
 eq_data$predicted_mmi <- exp(
   predict(
     model_mem_3,
@@ -195,8 +193,8 @@ eq_data$predicted_mmi <- exp(
   )
 )
 
-# Convert Felt RAPID locations to spatial points
 
+# Convert Felt RAPID locations to spatial points
 eq_sf <- eq_data |>
   st_as_sf(
     coords = c(
@@ -207,6 +205,7 @@ eq_sf <- eq_data |>
     remove = FALSE
   ) |>
   st_transform(2193)
+
 
 # Get earthquake epicentre
 earthquake <- eq_data |>
@@ -220,6 +219,7 @@ earthquake <- eq_data |>
   ) |>
   st_transform(2193)
 
+
 # Convert NZ map to NZTM
 nz_nztm <- nzmap |>
   st_transform(2193)
@@ -230,20 +230,15 @@ mw_value <- eq_data$Mw[1]
 
 depth <- eq_data$event_depth_km[1]
 
+
 # Hold Vs30 constant so predicted regions can be circular
 vs30_value <- median(
   eq_data$Vs30_raw,
   na.rm = TRUE
 )
 
+
 # Generate predicted MMI over hypocentral distance
-#
-# Start at earthquake depth because when epicentral distance
-# is zero:
-#
-# Rhypo = depth
-#
-# Predict out to 1000 km so lower MMI boundaries can be found.
 prediction_data <- tibble(
   Rhypo_km = seq(
     from = depth,
@@ -255,6 +250,8 @@ prediction_data <- tibble(
   publicid = earthquake_id
 )
 
+
+# Predict MMI
 prediction_data$predicted_mmi <- exp(
   predict(
     model_mem_3,
@@ -263,7 +260,8 @@ prediction_data$predicted_mmi <- exp(
   )
 )
 
-# Check prediction range
+
+# Get prediction range
 minimum_predicted <- min(
   prediction_data$predicted_mmi,
   na.rm = TRUE
@@ -281,25 +279,21 @@ print(
   )
 )
 
+
 # Define boundaries between integer MMI categories
-#
-# For example:
-#
-# 3.5 separates MMI 3 and MMI 4
-# 4.5 separates MMI 4 and MMI 5
-# 5.5 separates MMI 5 and MMI 6
 mmi_boundaries <- seq(
-  1.5,
+  2.5,
   7.5,
   by = 1
 )
 
 
-# Only keep boundaries that the model actually crosses
+# Only keep boundaries actually crossed by the model
 mmi_boundaries <- mmi_boundaries[
   mmi_boundaries >= minimum_predicted &
-  mmi_boundaries <= maximum_predicted
+    mmi_boundaries <= maximum_predicted
 ]
+
 
 # Find hypocentral distance where each boundary occurs
 ring_distances <- map_dfr(
@@ -321,13 +315,8 @@ ring_distances <- map_dfr(
   }
 )
 
-# Convert hypocentral distance to horizontal map distance
-#
-# Rhypo^2 = Repi^2 + depth^2
-#
-# Therefore:
-#
-# Repi = sqrt(Rhypo^2 - depth^2)
+
+# Convert hypocentral distance to horizontal distance
 ring_distances <- ring_distances |>
   mutate(
     radius_km = sqrt(
@@ -338,12 +327,22 @@ ring_distances <- ring_distances |>
     )
   )
 
-# Check boundary distances
+
+# Look at predicted MMI boundaries
 print(ring_distances)
 
-# Create spatial circles
+
+# Give each circle its integer MMI value
+rings <- ring_distances |>
+  mutate(
+    mmi = ceiling(boundary)
+  ) |>
+  arrange(desc(radius_km))
+
+
+# Create circle geometry
 ring_geometry <- lapply(
-  ring_distances$radius_km,
+  rings$radius_km,
   function(radius) {
 
     st_buffer(
@@ -355,84 +354,75 @@ ring_geometry <- lapply(
 )
 
 
-rings <- st_sf(
-  boundary = ring_distances$boundary,
-  radius_km = ring_distances$radius_km,
+# Convert circles to sf object
+rings_sf <- st_sf(
+  boundary = rings$boundary,
+  radius_km = rings$radius_km,
+  mmi = rings$mmi,
   geometry = st_sfc(
     ring_geometry,
     crs = 2193
   )
 )
 
-# Create labels for predicted MMI regions
 
-# Get earthquake coordinates
-epicentre_coords <- st_coordinates(earthquake)[1, ]
+# Get earthquake epicentre coordinates
+epicentre_coords <- st_coordinates(
+  earthquake
+)[1, ]
 
-# Order boundaries from smallest radius to largest
-label_data <- ring_distances |>
-  arrange(radius_km)
 
-# Create inner and outer radius of each region
-region_edges <- c(
-  0,
-  label_data$radius_km,
-  max(label_data$radius_km) + 100
-)
-
-# MMI at the centre of each region
-centre_mmi <- round(maximum_predicted)
-
-region_labels <- tibble(
-  mmi = centre_mmi - seq_along(head(region_edges, -1)) + 1,
-  radius_km = (
-    head(region_edges, -1) +
-    tail(region_edges, -1)
-  ) / 2
-)
-
-# Put labels to the east of the epicentre
-region_labels_sf <- st_as_sf(
-  region_labels |>
+# Create labels on right-hand edge of each circle
+# Remove MMI 6 label
+  circle_labels <- rings_sf |>
+    st_drop_geometry() |>
+    filter(mmi != 6) |>
     mutate(
       x = epicentre_coords[1] + radius_km * 1000,
       y = epicentre_coords[2],
       label = paste("MMI", mmi)
-    ),
-  coords = c("x", "y"),
-  crs = 2193
-)
+    ) |>
+    st_as_sf(
+      coords = c("x", "y"),
+      crs = 2193
+    )
 
+
+# Create map
 mmi_map <- ggplot() +
 
+  # NZ map
   geom_sf(
     data = nz_nztm,
     fill = "grey95",
     colour = "grey60"
   ) +
 
-  # Predicted MMI boundaries
+  # Predicted MMI regions
   geom_sf(
-    data = rings,
-    fill = NA,
-    linewidth = 1
+    data = rings_sf,
+    aes(fill = mmi),
+    colour = "black",
+    linewidth = 0.4,
+    alpha = 0.65
   ) +
 
-  # Observed reported MMI - smaller points
+  # MMI labels on right-hand side of circles
+  geom_sf_label(
+    data = circle_labels,
+    aes(label = label),
+    size = 3.5,
+    fontface = "bold",
+    fill = "white",
+    nudge_x = -100000
+  ) +
+
+  # Observed reported MMI points
   geom_sf(
     data = eq_sf,
     aes(colour = reported_mmi),
     size = 1,
     alpha = 0.7
-  ) +
-
-  # Predicted MMI region labels
-  geom_sf_label(
-    data = region_labels_sf,
-    aes(label = label),
-    size = 4,
-    fontface = "bold",
-    fill = "white"
   ) +
 
   # Earthquake epicentre
@@ -443,31 +433,56 @@ mmi_map <- ggplot() +
     stroke = 1.5
   ) +
 
+  # MMI colour scales
   scale_colour_viridis_c(
     limits = c(3, 8),
-    breaks = 1:8,
-    name = "Reported MMI"
+    breaks = 3:8,
+    name = "MMI"
+  ) +
+  
+  scale_fill_viridis_c(
+    limits = c(3, 8),
+    breaks = 3:8,
+    name = "MMI"
   ) +
 
   labs(
     title = "Observed and Predicted Earthquake Intensity",
-    subtitle = paste("Earthquake:", earthquake_id),
+    subtitle = paste(
+      "Earthquake:",
+      earthquake_id
+    ),
     x = NULL,
     y = NULL
   ) +
 
-  theme_minimal()
+  # Remove coordinate grid and degree labels
+  theme_void() +
+
+  theme(
+    legend.position = "right",
+    plot.title = element_text(
+      face = "bold"
+    )
+  )
+
 
 # Display map
 mmi_map
 ```
 
 ```{r}
+# Create earthquake_maps folder inside Project-Silvanus
+dir.create(
+  here("earthquake_maps"),
+  showWarnings = FALSE
+)
+
+# Save map
 ggsave(
-  filename = paste0(
-    "MMI_map_",
-    earthquake_id,
-    ".png"
+  filename = here(
+    "earthquake_maps",
+    paste0("MMI_map_", earthquake_id, ".png")
   ),
   plot = mmi_map,
   width = 10,
@@ -478,10 +493,294 @@ ggsave(
 ```
 
 ```{r}
-test <- read_parquet(
-  here("data_processed", "NZ_FR_IAR_dataset_all.parquet")
+# HYPOTHETICAL EARTHQUAKE MMI MAP
+
+# Define hypothetical earthquake
+earthquake_name <- "Hypothetical Earthquake"
+
+# Change these values for the earthquake you want to model
+event_longitude <- 172.6
+event_latitude  <- -43.5
+mw_value        <- 6.0
+depth           <- 15
+vs30_value      <- 400
+
+# Create earthquake epicentre
+earthquake <- tibble(
+  longitude = event_longitude,
+  latitude = event_latitude
+) |>
+  st_as_sf(
+    coords = c(
+      "longitude",
+      "latitude"
+    ),
+    crs = 4326
+  ) |>
+  st_transform(2193)
+
+# Convert NZ map to NZTM
+nz_nztm <- nzmap |>
+  st_transform(2193)
+
+# Generate hypocentral distances
+prediction_data <- tibble(
+  Rhypo_km = seq(
+    from = depth,
+    to = 10000,
+    by = 0.1
+  ),
+  Mw = mw_value,
+  Vs30_raw = vs30_value
+)
+
+# Predict MMI
+# re.form = NA means:
+# use fixed effects only because this is a new earthquake
+# with no known earthquake-specific random effect
+prediction_data$predicted_mmi <- exp(
+  predict(
+    model_mem_3,
+    newdata = prediction_data,
+    re.form = NA
+  )
+)
+
+# Get prediction range
+minimum_predicted <- min(
+  prediction_data$predicted_mmi,
+  na.rm = TRUE
+)
+
+maximum_predicted <- max(
+  prediction_data$predicted_mmi,
+  na.rm = TRUE
+)
+
+
+print(
+  c(
+    minimum_predicted = minimum_predicted,
+    maximum_predicted = maximum_predicted
+  )
+)
+
+# Define boundaries between integer MMI categories
+# Starting at 2.5 means no MMI 2 circle is drawn.
+mmi_boundaries <- seq(
+  2.5,
+  7.5,
+  by = 1
+)
+
+
+# Only keep boundaries actually crossed by model
+mmi_boundaries <- mmi_boundaries[
+  mmi_boundaries >= minimum_predicted &
+    mmi_boundaries <= maximum_predicted
+]
+
+# Find hypocentral distance of each MMI boundary
+ring_distances <- purrr::map_dfr(
+  mmi_boundaries,
+  function(boundary) {
+
+    closest <- prediction_data |>
+      slice_min(
+        abs(predicted_mmi - boundary),
+        n = 1,
+        with_ties = FALSE
+      )
+
+    tibble(
+      boundary = boundary,
+      Rhypo_km = closest$Rhypo_km,
+      predicted_mmi = closest$predicted_mmi
+    )
+  }
+)
+
+# Convert hypocentral distance to horizontal map distance
+#
+# Rhypo^2 = Repi^2 + depth^2
+# therefore:
+# Repi = sqrt(Rhypo^2 - depth^2)
+ring_distances <- ring_distances |>
+  mutate(
+    radius_km = sqrt(
+      pmax(
+        Rhypo_km^2 - depth^2,
+        0
+      )
+    )
+  )
+
+
+print(ring_distances)
+
+# Give each predicted region its integer MMI
+rings <- ring_distances |>
+  mutate(
+    mmi = ceiling(boundary)
+  ) |>
+  arrange(desc(radius_km))
+
+# Create circular MMI regions
+ring_geometry <- lapply(
+  rings$radius_km,
+  function(radius) {
+
+    st_buffer(
+      st_geometry(earthquake),
+      dist = radius * 1000
+    )[[1]]
+
+  }
+)
+
+
+rings_sf <- st_sf(
+  boundary = rings$boundary,
+  radius_km = rings$radius_km,
+  mmi = rings$mmi,
+  geometry = st_sfc(
+    ring_geometry,
+    crs = 2193
+  )
+)
+
+# Get epicentre coordinates
+epicentre_coords <- st_coordinates(
+  earthquake
+)[1, ]
+
+# Create labels on right-hand side of circles
+#
+# MMI 6 is excluded from the labels.
+# Remove "filter(mmi != 6)" if you want it back.
+circle_labels <- rings_sf |>
+  st_drop_geometry() |>
+  filter(mmi != 6) |>
+  mutate(
+
+    # Right-hand edge of each circle
+    x = epicentre_coords[1] +
+      radius_km * 1000,
+
+    y = epicentre_coords[2],
+
+    label = paste(
+      "MMI",
+      mmi
+    )
+  ) |>
+  st_as_sf(
+    coords = c("x", "y"),
+    crs = 2193
+  )
+
+# Create map
+mmi_map <- ggplot() +
+
+  # NZ map
+  geom_sf(
+    data = nz_nztm,
+    fill = "grey95",
+    colour = "grey60"
+  ) +
+
+  # Predicted MMI regions
+  geom_sf(
+    data = rings_sf,
+    aes(fill = mmi),
+    colour = "black",
+    linewidth = 0.4,
+    alpha = 0.65
+  ) +
+
+  # MMI labels
+  geom_sf_label(
+    data = circle_labels,
+    aes(label = label),
+    size = 3.5,
+    fontface = "bold",
+    fill = "white",
+    nudge_x = -10000
+  ) +
+
+  # Earthquake epicentre
+  geom_sf(
+    data = earthquake,
+    shape = 4,
+    size = 4,
+    stroke = 1.5
+  ) +
+
+  # MMI colour scale
+  scale_fill_viridis_c(
+    limits = c(3, 8),
+    breaks = 3:8,
+    name = "MMI"
+  ) +
+
+  # Titles
+  labs(
+    title = "Predicted Earthquake Intensity",
+    subtitle = paste0(
+      earthquake_name,
+      " | Mw ",
+      mw_value,
+      " | Depth ",
+      depth,
+      " km"
+    ),
+    x = NULL,
+    y = NULL
+  ) +
+
+  # Remove coordinate grid and axis labels
+  theme_void() +
+
+  theme(
+    legend.position = "right",
+    plot.title = element_text(
+      face = "bold"
+    )
+  )
+
+# Display map
+mmi_map
+
+
+# Create earthquake_maps folder if it does not exist
+dir.create(
+  here::here("earthquake_maps"),
+  showWarnings = FALSE
 )
 ```
+
+```{r}
+# Save map
+ggsave(
+  filename = here::here(
+    "earthquake_maps",
+    paste0(
+      "MMI_map_hypothetical_Mw",
+      mw_value,
+      "_depth",
+      depth,
+      "km.png"
+    )
+  ),
+  plot = mmi_map,
+  width = 10,
+  height = 8,
+  units = "in",
+  dpi = 300
+)
+```
+
+
 
 
 
