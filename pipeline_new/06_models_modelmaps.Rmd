@@ -886,7 +886,6 @@ train_data <- train_data |>
 # FINAL LINEAR MODEL
 
 # This currently uses the Model 6 structure.
-
 final_lm <- lm(
   reported_mmi_bc_final ~
     event_depth_km +
@@ -906,7 +905,6 @@ summary(
 
 # This currently uses:
 # log10(Repi) + linear Vs30 + random intercept/slope.
-
 final_mixed <- lmer(
   reported_mmi ~
     event_depth_km +
@@ -993,7 +991,6 @@ final_results <- tibble(
 print(
   final_results
 )
-
 ```
 
 
@@ -1089,6 +1086,29 @@ earthquake <- eq_data |>
 nz_nztm <- nzmap |>
   st_transform(2193)
 
+# Get coordinates from NZ map
+nz_coords <- st_coordinates(nz_nztm)
+
+# Find southernmost point
+south_point_coords <- nz_coords[
+  which.min(nz_coords[, "Y"]),
+  c("X", "Y")
+]
+
+# Convert to spatial point
+south_point <- st_sfc(
+  st_point(south_point_coords),
+  crs = 2193
+)
+
+# Distance from earthquake epicentre to southern point
+max_radius_km <- as.numeric(
+  st_distance(
+    st_geometry(earthquake),
+    south_point
+  )
+) / 1000
+
 # EARTHQUAKE VALUES
 mw_value <- eq_data$Mw[1]
 
@@ -1103,12 +1123,7 @@ vs30_value <- median(
 
 # GENERATE PREDICTIONS OVER EPICENTRAL DISTANCE
 
-# Use a sensible distance range for this earthquake
-max_distance <- max(
-  eq_data$Repi_km,
-  na.rm = TRUE
-)
-
+max_distance <- max_radius_km
 
 prediction_data <- tibble(
 
@@ -1168,11 +1183,8 @@ mmi_boundaries <- seq(
   by = 1
 )
 
-
-# Only retain boundaries crossed by predictions
 mmi_boundaries <- mmi_boundaries[
-  mmi_boundaries >= minimum_predicted &
-    mmi_boundaries <= maximum_predicted
+  mmi_boundaries <= maximum_predicted
 ]
 
 # FIND DISTANCE OF EACH MMI BOUNDARY
@@ -1202,12 +1214,13 @@ print(ring_distances)
 # CREATE MMI RINGS
 rings <- ring_distances |>
   mutate(
-    radius_km = Repi_km,
+    radius_km = pmin(
+      Repi_km,
+      max_radius_km
+    ),
     mmi = ceiling(boundary)
   ) |>
-  arrange(
-    desc(radius_km)
-  )
+  arrange(desc(radius_km))
 
 # CREATE CIRCLE GEOMETRY
 ring_geometry <- lapply(
@@ -1278,20 +1291,19 @@ mmi_map <- ggplot() +
     stroke = 1.5
   ) +
 
-  # Observed MMI colour scale
   scale_colour_viridis_c(
     limits = c(3, 8),
     breaks = 3:8,
-    name = "Observed MMI"
+    guide = "none"
   ) +
 
   # Predicted MMI colour scale
   scale_fill_viridis_c(
     limits = c(3, 8),
     breaks = 3:8,
-    name = "Predicted MMI"
+    name = "MMI"
   ) +
-
+  
   labs(
     title = "Observed and Predicted Earthquake Intensity",
     subtitle = paste(
@@ -1314,9 +1326,7 @@ mmi_map <- ggplot() +
 
 # DISPLAY MAP
 mmi_map
-```
 
-```{r}
 # Create earthquake_maps folder inside Project-Silvanus
 dir.create(
   here("earthquake_maps"),
@@ -1336,7 +1346,6 @@ ggsave(
   dpi = 300
 )
 ```
-
 
 
 
