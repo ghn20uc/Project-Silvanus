@@ -40,7 +40,9 @@ earthquake_data_trim <- earthquake_data[, c("publicid",
                                        "report_count",
                                        "fault_style",
                                        "has_felt_rapid",
-                                       "has_moment_tensor"
+                                       "has_moment_tensor",
+                                       "event_depth_km"
+                                      
                                         
 )]
 
@@ -91,7 +93,8 @@ earthquake_data_trim <- earthquake_data_trim[, c("publicid",
                                             "ln_Vs30",
                                             "reported_mmi",
                                             "report_count",
-                                            "fault_style"
+                                            "fault_style",
+                                            "event_depth_km"
 )]
 
 
@@ -125,12 +128,10 @@ Slightly skew data of Vs30 and centralized, however to get value not too separat
 ```{r}
 earthquake_data_trim <- earthquake_data_trim[, c("publicid",
                                                  "Mw",
-                                                 "Repi_km",
                                                  "Rhypo_km",
-                                                 "Rcentroid_km",
                                                  "ln_Vs30",
                                                  "reported_mmi",
-                                                 "fault_style"
+                                                 "event_depth_km"
 )]
 ```
 
@@ -234,7 +235,7 @@ min_class_size
 
 set.seed(1911)
 train_balanced <- downSample(
-  x = train[, c("Mw", "Repi_km", "Rhypo_km", "Rcentroid_km", "ln_Vs30", "fault_style")],
+  x = train[, c("Mw", "Rhypo_km", "event_depth_km", "ln_Vs30")],
   y = train$reported_mmi, yname = "reported_mmi"
 )
 
@@ -856,4 +857,64 @@ for (nm in names(all_eval)) {
 }
 
 cat("Xong. File nằm trong thư mục:", normalizePath("report_images"), "\n")
+```
+
+```{r}
+library(gridExtra)
+
+dir.create("report_images/importance", showWarnings = FALSE)
+
+# ---- 1. Random Forest & Bagging (Mean Decrease Gini) ----
+rf_models <- list(
+  "Bagging - baseline"       = bagging,
+  "Bagging - Tier 1"         = bagging_w,
+  "Bagging - Tier 2"         = bagging_strata,
+  "Bagging - Tier 3"         = bagging_bal,
+  "Random Forest - baseline" = rf,
+  "Random Forest - Tier 1"   = rf_w,
+  "Random Forest - Tier 2"   = rf_strata,
+  "Random Forest - Tier 3"   = rf_bal
+)
+
+for (nm in names(rf_models)) {
+  file_name <- paste0("report_images/importance/", gsub("[^A-Za-z0-9]", "_", nm), "_importance.png")
+  
+  png(file_name, width = 900, height = 700, res = 130)
+  varImpPlot(rf_models[[nm]], type = 2, main = paste("Variable Importance -", nm))
+  dev.off()
+}
+
+# ---- 2. Boosting (gbm - relative influence) ----
+gbm_models <- list(
+  "Boosting - baseline" = boost,
+  "Boosting - Tier 1"   = boost_w,
+  "Boosting - Tier 3"   = boost_bal
+)
+
+for (nm in names(gbm_models)) {
+  file_name <- paste0("report_images/importance/", gsub("[^A-Za-z0-9]", "_", nm), "_importance.png")
+  
+  png(file_name, width = 900, height = 700, res = 130)
+  summary(gbm_models[[nm]], main = paste("Variable Importance -", nm), las = 2)
+  dev.off()
+}
+
+# ---- 3. Rpart (variable.importance, tự vẽ bằng barplot) ----
+rpart_models <- list(
+  "Rpart - baseline" = prune_rpart,
+  "Rpart - Tier 1"   = prune_rpart_w,
+  "Rpart - Tier 3"   = prune_rpart_bal
+)
+
+for (nm in names(rpart_models)) {
+  file_name <- paste0("report_images/importance/", gsub("[^A-Za-z0-9]", "_", nm), "_importance.png")
+  imp <- rpart_models[[nm]]$variable.importance
+  
+  png(file_name, width = 900, height = 700, res = 130)
+  barplot(sort(imp, decreasing = TRUE), las = 2, cex.names = 0.8,
+          main = paste("Variable Importance -", nm), col = "steelblue")
+  dev.off()
+}
+
+cat("Xong. File nằm trong thư mục:", normalizePath("report_images/importance"), "\n")
 ```
