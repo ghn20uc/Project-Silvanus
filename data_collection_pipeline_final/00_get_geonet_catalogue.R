@@ -11,7 +11,8 @@ output_dir <- file.path("data_raw", "geonet_catalogue")
 # Request filter
 minimum_catalogue_magnitude <- 3.0
 
-# NZ bounding box, WNES
+# NZ bounding box, west, south, east, north.
+# Coordinates taken from the GeoNet QuakeSearch page
 bbox <- "163.5205,-49.1817,-176.9238,-32.2871"
 
 # Default False, set True if need to redo all months after changing parameters
