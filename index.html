@@ -32,6 +32,13 @@ Plotly.newPlot('src', [{
 
 Plotly.newPlot('mmi', [], base, {responsive:true});
 
+function wrapLon(lon, ref){
+  const d = lon - ref;
+  if (d > 180)  return lon - 360;
+  if (d < -180) return lon + 360;
+  return lon;
+}
+
 function draw(){
   if(!current) return;
   const e = EV.find(x=>x.id===current), r = REP[current];
@@ -42,15 +49,17 @@ function draw(){
   const layout = {...base, map:{style:'open-street-map', center:{lat:e.lat,lon:e.lon}, zoom:7}};
   if(!r){ Plotly.react('mmi', [], layout); return; }
 
+  const rlon = r.lon.map(x => wrapLon(x, e.lon));   // <-- kinh độ đã hiệu chỉnh
+
   const traces = [];
   if(showLines){
     const la=[], lo=[];
-    r.lat.forEach((_,i)=>{ la.push(e.lat, r.lat[i], null); lo.push(e.lon, r.lon[i], null); });
+    r.lat.forEach((_,i)=>{ la.push(e.lat, r.lat[i], null); lo.push(e.lon, rlon[i], null); });
     traces.push({type:'scattermap', mode:'lines', lat:la, lon:lo,
                  line:{width:1, color:'gray'}, hoverinfo:'skip', showlegend:false});
   }
   traces.push({
-    type:'scattermap', mode:'markers', lat:r.lat, lon:r.lon,
+    type:'scattermap', mode:'markers', lat:r.lat, lon:rlon,
     text:r.mmi.map((m,i)=>`MMI ${m}` + (showDist && r.repi[i]>=0 ? `<br>${r.repi[i]} km` : '')),
     hoverinfo:'text',
     marker:{color:r.mmi, colorscale:'Turbo', cmin:0, cmax:10, size:8, colorbar:{title:'MMI'}}
