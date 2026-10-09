@@ -892,7 +892,7 @@ final_lm <- lm(
     Mw +
     Repi_km +
     log10(Repi_km) +
-    log10(Vs30_m_s),
+    Vs30_m_s,
   data = train_data
 )
 
@@ -993,6 +993,94 @@ print(
 )
 ```
 
+```{r}
+# PREDICTION PERFORMANCE BY MMI LEVEL
+library(dplyr)
+library(ggplot2)
+
+# Predict MMI on the test dataset
+pred_bc <- predict(final_lm, newdata = test_data)
+
+pred_mmi <- inverse_boxcox(
+  pred_bc,
+  best_lambda_final
+)
+
+# Create evaluation dataset
+results <- test_data |>
+  mutate(
+    predicted_mmi = pred_mmi,
+    error = predicted_mmi - reported_mmi,
+    absolute_error = abs(error),
+    squared_error = error^2,
+
+    # Group observations by observed MMI category
+    mmi_category = floor(reported_mmi + 0.5)
+  ) |>
+  filter(
+    !is.na(predicted_mmi),
+    !is.na(reported_mmi)
+  )
+
+
+# 1. OVERALL PERFORMANCE
+overall_results <- results |>
+  summarise(
+    MAE = mean(absolute_error),
+    RMSE = sqrt(mean(squared_error))
+  )
+
+print(overall_results)
+
+
+# 2. PERFORMANCE BY OBSERVED MMI
+mmi_results <- results |>
+  group_by(mmi_category) |>
+  summarise(
+    n = n(),
+    MAE = mean(absolute_error),
+    RMSE = sqrt(mean(squared_error)),
+    mean_error = mean(error),
+    underprediction_rate = mean(error < 0) * 100,
+    .groups = "drop"
+  ) |>
+  arrange(mmi_category)
+
+print(mmi_results)
+
+
+# 3. MACRO-AVERAGED MAE
+# Gives each observed MMI category equal weight
+macro_mae <- mmi_results |>
+  filter(mmi_category %in% 3:8) |>
+  summarise(
+    macro_MAE = mean(MAE)
+  )
+
+print(macro_mae)
+
+
+# 4. PLOT ERROR BY OBSERVED MMI
+ggplot(
+  mmi_results,
+  aes(
+    x = factor(mmi_category),
+    y = mean_error
+  )
+) +
+  geom_col(fill = "steelblue") +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Prediction Error by Observed MMI",
+    x = "Observed MMI",
+    y = "Mean Prediction Error (MMI)"
+  ) +
+  theme_minimal()
+```
+
 
 # Mapping
 ```{r}
@@ -1060,6 +1148,12 @@ eq_data$predicted_mmi <- inverse_boxcox(
 
 # CONVERT FELT RAPID LOCATIONS TO SPATIAL POINTS
 eq_sf <- eq_data |>
+  mutate(
+    observed_mmi_category = factor(
+      floor(reported_mmi + 0.5),
+      levels = 3:8
+    )
+  ) |>
   st_as_sf(
     coords = c(
       "report_longitude",
@@ -1251,6 +1345,8 @@ rings_sf <- st_sf(
 
 )
 
+rings_sf$mmi <- factor(rings_sf$mmi, levels = 3:8)
+
 # CREATE MAP
 mmi_map <- ggplot() +
 
@@ -1276,9 +1372,7 @@ mmi_map <- ggplot() +
   # Observed MMI at Felt RAPID cells
   geom_sf(
     data = eq_sf,
-    aes(
-      colour = reported_mmi
-    ),
+    aes(colour = observed_mmi_category),
     size = 1,
     alpha = 0.7
   ) +
@@ -1291,28 +1385,28 @@ mmi_map <- ggplot() +
     stroke = 1.5
   ) +
 
-  scale_colour_viridis_c(
-    limits = c(3, 8),
-    breaks = 3:8,
+  scale_colour_viridis_d(
+    limits = as.character(3:8),
     guide = "none"
   ) +
-
-  # Predicted MMI colour scale
-  scale_fill_viridis_c(
-    limits = c(3, 8),
-    breaks = 3:8,
-    name = "MMI"
+  
+  scale_fill_viridis_d(
+    limits = as.character(3:8),
+    name = "MMI",
+    guide = guide_legend(reverse = TRUE)
   ) +
   
   labs(
     title = "Observed and Predicted Earthquake Intensity",
-    subtitle = paste(
-      "Earthquake:",
-      earthquake_id
+    subtitle = paste0(
+      "Earthquake: ", earthquake_id,
+      " | Mw: ", round(mw_value, 2),
+      " | Depth: ", round(depth, 1), " km"
     ),
     x = NULL,
     y = NULL
   ) +
+
 
   theme_void() +
 
@@ -1346,7 +1440,5 @@ ggsave(
   dpi = 300
 )
 ```
-
-
 
 
