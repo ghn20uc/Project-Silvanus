@@ -1440,5 +1440,19 @@ ggsave(
   dpi = 300
 )
 ```
+```{r}
+# Create folder if it doesn't exist
+dir.create("data_raw", showWarnings = FALSE)
 
+# Save earthquake IDs
+saveRDS(
+  unique(train_data$publicid),
+  "data_raw/train_earthquake_ids.rds"
+)
+
+saveRDS(
+  unique(test_data$publicid),
+  "data_raw/test_earthquake_ids.rds"
+)
+```
 

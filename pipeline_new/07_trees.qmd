@@ -20,26 +20,31 @@ library(caret)
 Read file
 
 ```{r}
-earthquake_data = read_parquet("../data_processed/NZ_FR_IAR_final_dataset.parquet")
-```
+# Load earthquake data
+earthquake_data <- read_parquet(
+  "../data_processed/NZ_FR_IAR_final_dataset.parquet"
+)
 
-```{r}
-glimpse(earthquake_data)
-
-earthquake_data_trim <- earthquake_data[, c("publicid",
-                                       "Mw",
-                                       "Repi_km",
-                                       "Rhypo_km",
-                                       "Vs30_m_s",
-                                       "reported_mmi",
-                                       "report_count",
-                                       "fault_style",
-                                       "event_depth_km",
-                                       "report_longitude",
-                                       "report_latitude"
+# Create classification dataframe
+earthquake_data_trim <- earthquake_data[, c(
+  "publicid",
+  "Mw",
+  "Vs30_m_s",
+  "Rhypo_km",
+  "reported_mmi",
+  "report_count",
+  "fault_style",
+  "event_depth_km",
+  "Repi_km",
+  "report_longitude",
+  "report_latitude"
 )]
 
-# glimpse(earthquake_data_trim)
+# Inspect dataset
+glimpse(earthquake_data_trim)
+
+# Inspect dataset
+glimpse(earthquake_data_trim)
 ```
 
 ```{r}
@@ -112,7 +117,6 @@ hist(
 )
 ```
 
-
 Slightly skew data of Vs30 and centralized, however to get value not too separate retain ln_Vs30, therefore removethe column Vs30.
 
 ```{r}
@@ -133,23 +137,31 @@ earthquake_data_trim <- earthquake_data_trim[, c("publicid",
 Split data for train and test
 
 ```{r}
-set.seed(1911)
+# Filter cells with at least 4 felt reports
+earthquake_data_trim <- earthquake_data_trim |>
+  filter(report_count >= 4)
 
-publicids <- unique(earthquake_data_trim$publicid)
+# Load earthquake IDs from linear regression
+train_ids <- readRDS("data_raw/train_earthquake_ids.rds")
+test_ids <- readRDS("data_raw/test_earthquake_ids.rds")
 
-train_ids <- sample(publicids, size = floor(0.8 * length(publicids)))
+# Split using the same earthquakes as linear regression
+train <- earthquake_data_trim |>
+  filter(publicid %in% train_ids)
 
-train <- earthquake_data_trim[earthquake_data_trim$publicid %in% train_ids,]
+test <- earthquake_data_trim |>
+  filter(publicid %in% test_ids)
 
-test <- earthquake_data_trim[!earthquake_data_trim$publicid %in% train_ids,]
+# Check counts
+cat("Train earthquakes:", n_distinct(train$publicid), "\n")
+cat("Test earthquakes:", n_distinct(test$publicid), "\n")
 
-# publicid chỉ dùng để chia train/test theo trận động đất, KHÔNG đưa vào làm biến dự đoán
+cat("Train observations:", nrow(train), "\n")
+cat("Test observations:", nrow(test), "\n")
+
+# Remove publicid before modelling
 train$publicid <- NULL
-test$publicid  <- NULL
-
-
-#dim(train)
-#dim(test)
+test$publicid <- NULL
 ```
 
 ## Function for models evaluation
@@ -161,10 +173,19 @@ n_class    <- length(mmi_levels)
 # confusion matrix, accuracy, balanced accuracy, precision, recall, F1, AUC multiclass
 eval_summary <- function(pred_class, prob_matrix, actual, model_name) {
   cm <- table(Predicted = pred_class, Actual = actual)
-  acc <- sum(diag(cm)) / sum(cm)
-  recall    <- diag(cm) / colSums(cm)                     
-  precision <- diag(cm) / rowSums(cm)                      
-  f1        <- 2 * precision * recall / (precision + recall)  
+  
+  safe_div <- function(num, den) {
+    out <- num / den
+    out[!is.finite(out)] <- 0
+    out
+  }
+  
+  acc       <- safe_div(sum(diag(cm)), sum(cm))
+  recall    <- safe_div(diag(cm), colSums(cm))
+  precision <- safe_div(diag(cm), rowSums(cm))
+  f1        <- safe_div(2 * precision * recall, precision + recall)
+  
+  # ... phần cat(), print(), AUC bên dưới giữ nguyên  
   
   cat("----", model_name, "----\n")
   print(cm)
@@ -190,7 +211,7 @@ plot_ovr_roc <- function(prob_matrix, actual, model_name) {
        xlab = "False Positive Rate", ylab = "True Positive Rate",
        main = paste("One-vs-Rest ROC -", model_name))
   abline(a = 0, b = 1, lty = 2, col = "gray")
-
+  
   aucs <- numeric(length(mmi_levels))
   for (i in seq_along(mmi_levels)) {
     lvl <- mmi_levels[i]
@@ -199,11 +220,11 @@ plot_ovr_roc <- function(prob_matrix, actual, model_name) {
     lines(1 - roc_obj$specificities, roc_obj$sensitivities, col = colors[i], lwd = 2)
     aucs[i] <- auc(roc_obj)
   }
-
+  
   legend("bottomright",
          legend = paste0("MMI ", mmi_levels, " (AUC = ", round(aucs, 2), ")"),
          col = colors, lwd = 2, cex = 0.6)
-
+  
   invisible(setNames(aucs, mmi_levels))
 }
 ```
@@ -912,4 +933,45 @@ for (nm in names(rpart_models)) {
 }
 
 cat("Xong. File nằm trong thư mục:", normalizePath("report_images/importance"), "\n")
+```
+
+```{r}
+library(dplyr)
+
+# Create dataframe of actual and predicted MMI
+classification_results <- data.frame(
+  actual_mmi = as.numeric(as.character(test$reported_mmi)),
+  predicted_mmi = as.numeric(as.character(boost_pred_w))
+) |>
+  mutate(
+    mmi_category = floor(actual_mmi + 0.5),
+    error = predicted_mmi - actual_mmi,
+    absolute_error = abs(error),
+    squared_error = error^2
+  ) |>
+  filter(
+    !is.na(actual_mmi),
+    !is.na(predicted_mmi)
+  )
+
+# Calculate performance by actual MMI category
+classification_mmi_results <- classification_results |>
+  group_by(mmi_category) |>
+  summarise(
+    n = n(),
+    MAE = mean(absolute_error),
+    RMSE = sqrt(mean(squared_error)),
+    mean_error = mean(error),
+    underprediction_rate = mean(error < 0) * 100,
+    .groups = "drop"
+  )
+
+print(classification_mmi_results)
+
+# Overall RMSE and MAE
+classification_results |>
+  summarise(
+    MAE = mean(absolute_error),
+    RMSE = sqrt(mean(squared_error))
+  )
 ```
