@@ -42,9 +42,6 @@ earthquake_data_trim <- earthquake_data[, c(
 
 # Inspect dataset
 glimpse(earthquake_data_trim)
-
-# Inspect dataset
-glimpse(earthquake_data_trim)
 ```
 
 ```{r}
@@ -100,14 +97,6 @@ earthquake_data_trim$fault_style <- factor(earthquake_data_trim$fault_style)
 ```
 
 ```{r}
-hist(
-  earthquake_data_trim$Vs30_m_s,
-  breaks = 50,
-  main = "Distribution of Vs30",
-  xlab = "Vs30 (m/s)",
-  ylab = "Frequency"
-)
-
 hist(
   earthquake_data_trim$log10_Vs30,
   breaks = 50,
@@ -172,19 +161,19 @@ n_class    <- length(mmi_levels)
 
 # confusion matrix, accuracy, balanced accuracy, precision, recall, F1, AUC multiclass
 eval_summary <- function(pred_class, prob_matrix, actual, model_name) {
+
   cm <- table(Predicted = pred_class, Actual = actual)
-  
+
   safe_div <- function(num, den) {
     out <- num / den
     out[!is.finite(out)] <- 0
     out
   }
-  
+
   acc       <- safe_div(sum(diag(cm)), sum(cm))
   recall    <- safe_div(diag(cm), colSums(cm))
   precision <- safe_div(diag(cm), rowSums(cm))
   f1        <- safe_div(2 * precision * recall, precision + recall)
-  
   # ... phần cat(), print(), AUC bên dưới giữ nguyên  
   
   cat("----", model_name, "----\n")
