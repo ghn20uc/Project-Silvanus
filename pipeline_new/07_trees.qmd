@@ -24,7 +24,7 @@ earthquake_data = read_parquet("../data_processed/NZ_FR_IAR_final_dataset.parque
 ```
 
 ```{r}
-glimpse(earthquake_data)
+# glimpse(earthquake_data)
 
 earthquake_data_trim <- earthquake_data[, c("publicid",
                                        "Mw",
@@ -161,10 +161,19 @@ n_class    <- length(mmi_levels)
 # confusion matrix, accuracy, balanced accuracy, precision, recall, F1, AUC multiclass
 eval_summary <- function(pred_class, prob_matrix, actual, model_name) {
   cm <- table(Predicted = pred_class, Actual = actual)
-  acc <- sum(diag(cm)) / sum(cm)
-  recall    <- diag(cm) / colSums(cm)                     
-  precision <- diag(cm) / rowSums(cm)                      
-  f1        <- 2 * precision * recall / (precision + recall)  
+
+  safe_div <- function(num, den) {
+    out <- num / den
+    out[!is.finite(out)] <- 0
+    out
+  }
+
+  acc       <- safe_div(sum(diag(cm)), sum(cm))
+  recall    <- safe_div(diag(cm), colSums(cm))
+  precision <- safe_div(diag(cm), rowSums(cm))
+  f1        <- safe_div(2 * precision * recall, precision + recall)
+
+  # ... phần cat(), print(), AUC bên dưới giữ nguyên  
   
   cat("----", model_name, "----\n")
   print(cm)
