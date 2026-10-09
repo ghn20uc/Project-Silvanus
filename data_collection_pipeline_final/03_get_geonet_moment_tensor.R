@@ -65,7 +65,7 @@ mt_candidates <- mt_raw |>
     !is.na(publicid),
     publicid != "9999999",
     !is.na(Mw),
-    between(Mw, 0, 10)
+    between(Mw, 0, 11)
   )
 
 if (nrow(mt_candidates) == 0) {
