@@ -3,7 +3,7 @@
 
 # Add Vs30 site-condition values to the Felt RAPID analysis dataset.
 
-# Median Vs30 raster published with Foster et al. (2019)
+# Median Vs30 raster Foster et al. (2019)
 # https://onlinelibrary.wiley.com/doi/10.1193/121118EQS281M
 
 # Supplementary file esp4bf02915-sup-0003.tif must be downloaded from the above
