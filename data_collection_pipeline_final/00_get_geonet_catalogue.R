@@ -20,7 +20,7 @@ overwrite_existing <- FALSE
 
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-# Felt RAPID reports are available from 1 September 2016
+# Felt RAPID reports from 1 September 2016, as per project outline
 current_month <- floor_date(Sys.Date(), "month")
 months <- seq(
   as.Date("2016-09-01"),
