@@ -268,17 +268,17 @@ plot(cv_tree_earthquake$size, cv_tree_earthquake$dev, type = 'b')
 Cross validation shows 2 to 4 node is acceptable. Prune and check.
 
 ```{r}
-prune_eq_2 <- prune.misclass(tree_earthquake, best = 2)
+prune_eq_6 <- prune.misclass(tree_earthquake, best = 6)
 
-plot(prune_eq_2)
-text(prune_eq_2, pretty = 0, cex = 0.8)
+plot(prune_eq_6)
+text(prune_eq_6, pretty = 0, cex = 0.8)
 ```
 
 ```{r}
-prune_eq_3 <- prune.misclass(tree_earthquake, best = 3)
+prune_eq_7 <- prune.misclass(tree_earthquake, best = 7)
 
-plot(prune_eq_3)
-text(prune_eq_3, pretty = 0, cex = 0.8)
+plot(prune_eq_7)
+text(prune_eq_7, pretty = 0, cex = 0.8)
 ```
 
 ```{r}
@@ -291,35 +291,30 @@ text(prune_eq_4, pretty = 0, cex = 0.8)
 Checking trees with confusing matrix
 
 ```{r}
-prune_2_pred <- predict(prune_eq_2, test, type = 'class')
+prune_6_pred <- predict(prune_eq_6, test, type = 'class')
 
-table(prune_2_pred, test$reported_mmi)
+table(prune_6_pred, test$reported_mmi)
 ```
 
 ```{r}
-prune_3_pred <- predict(prune_eq_3, test, type = 'class')
+prune_7_pred <- predict(prune_eq_7, test, type = 'class')
 
-table(prune_3_pred, test$reported_mmi)
+table(prune_7_pred, test$reported_mmi)
 ```
 
-```{r}
-prune_4_pred <- predict(prune_eq_4, test, type = 'class')
-
-table(prune_4_pred, test$reported_mmi)
-```
 
 Three prune tree share the same confusing matrix.
 
 ROC tree baseline
 
 ```{r}
-prune3_prob <- predict(prune_eq_3, test, type = "vector")
+prune6_prob <- predict(prune_eq_6, test, type = "vector")
 
-eval_tree_base <- eval_summary(prune_3_pred, prune3_prob, test$reported_mmi, "Tree (prune, best=3) - baseline")
+eval_tree_base <- eval_summary(prune_6_pred, prune6_prob, test$reported_mmi, "Tree (prune, best=6) - baseline")
 ```
 
 ```{r}
-plot_ovr_roc(prune3_prob, test$reported_mmi, "Tree (prune, best=3) - baseline")
+plot_ovr_roc(prune6_prob, test$reported_mmi, "Tree (prune, best=6) - baseline")
 ```
 
 Imbalance treatment Tree
