@@ -20,7 +20,11 @@ library(tidyverse)
 library(sf)
 library(lme4)
 library(here)
+library(ggspatial)
+library(ggnewscale)
+```
 
+```{r}
 # LOAD DATA
 data <- read_parquet(
   here(
@@ -1119,7 +1123,7 @@ nzmap <- st_read("nzmap/regional-council-2025-clipped.gpkg")
 # MAP OBSERVED AND PREDICTED MMI FOR ONE EARTHQUAKE
 
 # Choose earthquake
-earthquake_id <- "2023p122368"
+earthquake_id <- "2024p753169"
 
 # GET EARTHQUAKE DATA
 eq_data <- data_sd |>
@@ -1180,8 +1184,41 @@ earthquake <- eq_data |>
 nz_nztm <- nzmap |>
   st_transform(2193)
 
+# Remove the Chatham Islands from the map
+# Keep only the mainland New Zealand region
+mainland_bbox <- st_bbox(
+  c(
+    xmin = 1000000,
+    ymin = 4700000,
+    xmax = 2100000,
+    ymax = 6300000
+  ),
+  crs = st_crs(2193)
+)
+
+nz_nztm <- st_crop(
+  nz_nztm,
+  mainland_bbox
+)
+
+# GET NEW ZEALAND MAP BOUNDARIES
+nz_bbox <- st_bbox(nz_nztm)
+
+# Add a margin around New Zealand
+x_margin <- (nz_bbox["xmax"] - nz_bbox["xmin"]) * 0.20
+y_margin <- (nz_bbox["ymax"] - nz_bbox["ymin"]) * 0.10
+
 # Get coordinates from NZ map
-nz_coords <- st_coordinates(nz_nztm)
+nz_coords <- nz_nztm |>
+  st_geometry() |>
+  st_collection_extract("POLYGON") |>
+  st_coordinates()
+
+# Find southernmost point
+south_point_coords <- nz_coords[
+  which.min(nz_coords[, "Y"]),
+  c("X", "Y")
+]
 
 # Find southernmost point
 south_point_coords <- nz_coords[
@@ -1347,6 +1384,16 @@ rings_sf <- st_sf(
 
 rings_sf$mmi <- factor(rings_sf$mmi, levels = 3:8)
 
+# MMI COLOURS
+mmi_colours <- c(
+  "3" = "#BFCCFF",
+  "4" = "#A0E6FF",
+  "5" = "#80F5A0",
+  "6" = "#FFFF00",
+  "7" = "#FFC800",
+  "8" = "#FF9100"
+)
+
 # CREATE MAP
 mmi_map <- ggplot() +
 
@@ -1354,7 +1401,8 @@ mmi_map <- ggplot() +
   geom_sf(
     data = nz_nztm,
     fill = "grey95",
-    colour = "grey60"
+    colour = "grey60",
+    linewidth = 0.25
   ) +
 
   # Predicted MMI regions
@@ -1364,17 +1412,30 @@ mmi_map <- ggplot() +
     aes(
       fill = mmi
     ),
-    colour = "black",
-    linewidth = 0.4,
-    alpha = 0.65
+    colour = "grey35",
+    linewidth = 0.35,
+    alpha = 0.45
+  ) +
+
+  # NZ boundaries drawn above predicted circles
+  # Keeps New Zealand visible behind the circles
+  geom_sf(
+    data = nz_nztm,
+    fill = NA,
+    colour = "grey45",
+    linewidth = 0.3
   ) +
 
   # Observed MMI at Felt RAPID cells
   geom_sf(
     data = eq_sf,
-    aes(colour = observed_mmi_category),
-    size = 1,
-    alpha = 0.7
+    aes(fill = observed_mmi_category),
+    shape = 21,
+    colour = "black",
+    stroke = 0.2,
+    size = 1.5,
+    alpha = 0.95,
+    show.legend = FALSE
   ) +
 
   # Earthquake epicentre
@@ -1385,17 +1446,36 @@ mmi_map <- ggplot() +
     stroke = 1.5
   ) +
 
-  scale_colour_viridis_d(
-    limits = as.character(3:8),
-    guide = "none"
+  # North arrow
+  annotation_north_arrow(
+    location = "tr",
+    which_north = "true",
+    pad_x = unit(0.3, "in"),
+    pad_y = unit(0.3, "in"),
+    height = unit(0.8, "cm"),
+    width = unit(0.8, "cm"),
+    style = north_arrow_minimal
   ) +
   
-  scale_fill_viridis_d(
+    # Scale bar
+  annotation_scale(
+    location = "br",
+    width_hint = 0.25,
+    unit_category = "metric",
+    style = "bar",
+    pad_x = unit(0.3, "in"),
+    pad_y = unit(0.3, "in"),
+    text_cex = 0.8,
+    line_width = 0.7
+  ) +
+
+  scale_fill_manual(
+    values = mmi_colours,
     limits = as.character(3:8),
     name = "MMI",
     guide = guide_legend(reverse = TRUE)
   ) +
-  
+
   labs(
     title = "Observed and Predicted Earthquake Intensity",
     subtitle = paste0(
@@ -1407,6 +1487,19 @@ mmi_map <- ggplot() +
     y = NULL
   ) +
 
+  # Focus map on New Zealand
+  coord_sf(
+    xlim = c(
+      nz_bbox["xmin"] - x_margin,
+      nz_bbox["xmax"] + x_margin
+    ),
+    ylim = c(
+      nz_bbox["ymin"] - y_margin,
+      nz_bbox["ymax"] + y_margin
+    ),
+    expand = FALSE,
+    datum = NA
+  ) +
 
   theme_void() +
 
@@ -1440,19 +1533,3 @@ ggsave(
   dpi = 300
 )
 ```
-```{r}
-# Create folder if it doesn't exist
-dir.create("data_raw", showWarnings = FALSE)
-
-# Save earthquake IDs
-saveRDS(
-  unique(train_data$publicid),
-  "data_raw/train_earthquake_ids.rds"
-)
-
-saveRDS(
-  unique(test_data$publicid),
-  "data_raw/test_earthquake_ids.rds"
-)
-```
-
