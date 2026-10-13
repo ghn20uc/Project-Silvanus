@@ -49,12 +49,12 @@ colnames(earthquake_data_trim)
 
 table(earthquake_data_trim$reported_mmi)
 
+table(earthquake_data_trim$fault_style)
 ```
 
-MMI value below 3 is only 7 observations recorded. The fact that below 3 MMI is very hard for human to really consider correctly report, therefore removing observation below 3, giving 197421 - 7 = 197414 total MMI count.
 
 ```{r}
-#colSums(is.na(earthquake_data_trim))
+colSums(is.na(earthquake_data_trim))
 
 earthquake_data_trim <- earthquake_data_trim[earthquake_data_trim$reported_mmi >= 3, ]
 
@@ -799,10 +799,10 @@ barplot(metrics_matrix, beside = TRUE,
 dev.off()
 
 # 3. 16 ROC one-vs-rest
-png("report_images/03_roc_grid.png", width = 1800, height = 1800, res = 130)
+png("report_images/03_roc_grid.png", width = 3600, height = 3600, res = 300)
 
 prob_list <- list(
-  "Tree - baseline" = prune3_prob, "Tree - Tier 3" = prob_tree_bal,
+  "Tree - baseline" = prune6_prob, "Tree - Tier 3" = prob_tree_bal,
   "Rpart - baseline" = rpart_prob, "Rpart - Tier 1" = prob_rpart_w, "Rpart - Tier 3" = prob_rpart_bal,
   "Bagging - baseline" = bag_prob, "Bagging - Tier 1" = bag_prob_w, "Bagging - Tier 2" = bag_prob_strata, "Bagging - Tier 3" = bag_prob_bal,
   "Random Forest - baseline" = rf_prob, "Random Forest - Tier 1" = rf_prob_w, "Random Forest - Tier 2" = rf_prob_strata, "Random Forest - Tier 3" = rf_prob_bal,
@@ -831,7 +831,7 @@ for (nm in names(all_eval)) {
   file_name <- paste0("report_images/confusion_matrices/", gsub("[^A-Za-z0-9]", "_", nm), ".png")
   cm_df <- as.data.frame.matrix(all_eval[[nm]]$cm)
   
-  png(file_name, width = 900, height = 650, res = 130)
+  png(file_name, width = 1200, height = 800, res = 130)
   grid.arrange(tableGrob(cm_df), top = nm)
   dev.off()
 }
@@ -851,7 +851,7 @@ for (nm in names(all_eval)) {
     row.names = NULL
   )
   
-  png(file_name, width = 800, height = 500, res = 130)
+  png(file_name, width = 1200, height = 800, res = 130)
   grid.arrange(tableGrob(metrics_df, rows = NULL), top = nm)
   dev.off()
 }
@@ -863,6 +863,23 @@ cat("Xong. File nằm trong thư mục:", normalizePath("report_images"), "\n")
 library(gridExtra)
 
 dir.create("report_images/importance", showWarnings = FALSE)
+
+# Hàm vẽ chung: barplot ngang, lề trái cố định
+plot_importance <- function(values, labels, title, xlab, file_name, left_mar = 11) {
+  o <- order(values)                      # tăng dần để biến lớn nhất nằm trên cùng
+  values <- values[o]; labels <- labels[o]
+
+  png(file_name, width = 1400, height = 800, res = 130)
+  par(mar = c(5, left_mar, 4, 2))
+  barplot(values, names.arg = labels, horiz = TRUE, las = 1,
+          col = rainbow(length(values), start = 3/6, end = 4/6),
+          xlab = xlab, main = paste("Variable Importance -", title))
+  dev.off()
+}
+
+make_path <- function(nm) {
+  paste0("report_images/importance/", gsub("[^A-Za-z0-9]", "_", nm), "_importance.png")
+}
 
 # ---- 1. Random Forest & Bagging (Mean Decrease Gini) ----
 rf_models <- list(
@@ -877,11 +894,9 @@ rf_models <- list(
 )
 
 for (nm in names(rf_models)) {
-  file_name <- paste0("report_images/importance/", gsub("[^A-Za-z0-9]", "_", nm), "_importance.png")
-  
-  png(file_name, width = 900, height = 700, res = 130)
-  varImpPlot(rf_models[[nm]], type = 2, main = paste("Variable Importance -", nm))
-  dev.off()
+  imp <- importance(rf_models[[nm]], type = 2)
+  plot_importance(imp[, 1], rownames(imp), nm,
+                  xlab = "Mean Decrease Gini", file_name = make_path(nm))
 }
 
 # ---- 2. Boosting (gbm - relative influence) ----
@@ -892,14 +907,12 @@ gbm_models <- list(
 )
 
 for (nm in names(gbm_models)) {
-  file_name <- paste0("report_images/importance/", gsub("[^A-Za-z0-9]", "_", nm), "_importance.png")
-  
-  png(file_name, width = 900, height = 700, res = 130)
-  summary(gbm_models[[nm]], main = paste("Variable Importance -", nm), las = 2)
-  dev.off()
+  imp <- summary(gbm_models[[nm]], plotit = FALSE)
+  plot_importance(imp$rel.inf, as.character(imp$var), nm,
+                  xlab = "Relative influence", file_name = make_path(nm))
 }
 
-# ---- 3. Rpart (variable.importance, tự vẽ bằng barplot) ----
+# ---- 3. Rpart (variable.importance) ----
 rpart_models <- list(
   "Rpart - baseline" = prune_rpart,
   "Rpart - Tier 1"   = prune_rpart_w,
@@ -907,13 +920,9 @@ rpart_models <- list(
 )
 
 for (nm in names(rpart_models)) {
-  file_name <- paste0("report_images/importance/", gsub("[^A-Za-z0-9]", "_", nm), "_importance.png")
   imp <- rpart_models[[nm]]$variable.importance
-  
-  png(file_name, width = 900, height = 700, res = 130)
-  barplot(sort(imp, decreasing = TRUE), las = 2, cex.names = 0.8,
-          main = paste("Variable Importance -", nm), col = "steelblue")
-  dev.off()
+  plot_importance(as.numeric(imp), names(imp), nm,
+                  xlab = "Variable importance", file_name = make_path(nm))
 }
 
 cat("Xong. File nằm trong thư mục:", normalizePath("report_images/importance"), "\n")
