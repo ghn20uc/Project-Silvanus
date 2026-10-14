@@ -240,7 +240,7 @@ min_class_size
 
 set.seed(1911)
 train_balanced <- downSample(
-  x = train[, c("Mw", "Rhypo_km", "report_count", "fault_style", "event_depth_km", "Repi_km", "report_longitude", "report_latitude", "log10_Vs30")],
+  x = train[, c("Mw", "Rhypo_km", "fault_style", "event_depth_km", "Repi_km", "report_longitude", "report_latitude", "log10_Vs30")],
   y = train$reported_mmi, yname = "reported_mmi"
 )
 
