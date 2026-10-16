@@ -22,6 +22,10 @@ library(lme4)
 library(here)
 library(ggspatial)
 library(ggnewscale)
+library(dplyr)
+library(ggplot2)
+library(sandwich)
+library(lmtest)
 ```
 
 ```{r}
@@ -905,6 +909,44 @@ summary(
   final_lm
 )
 
+# COEFFICIENT TABLE WITH CLUSTER-ROBUST STANDARD ERRORS
+
+# 1. Calculate cluster-robust covariance matrix
+# Group observations by earthquake (publicid)
+cluster_vcov <- vcovCL(
+  final_lm,
+  cluster = train_data$publicid,
+  type = "HC1"
+)
+
+# 2. Extract coefficient estimates and robust standard errors
+coefficient_results <- coeftest(
+  final_lm,
+  vcov. = cluster_vcov,
+  df = Inf
+)
+
+# 3. Calculate 95% confidence intervals
+coefficient_table <- data.frame(
+  Predictor = rownames(coefficient_results),
+  Estimate = coefficient_results[, 1],
+  Robust_SE = coefficient_results[, 2],
+  CI_lower = coefficient_results[, 1] -
+    1.96 * coefficient_results[, 2],
+  CI_upper = coefficient_results[, 1] +
+    1.96 * coefficient_results[, 2],
+  p_value = coefficient_results[, 4]
+) |>
+  mutate(
+    across(
+      where(is.numeric),
+      ~ signif(.x, 4)
+    )
+  )
+
+# 4. Display results
+print(coefficient_table, row.names = FALSE)
+
 # FINAL MIXED MODEL
 
 # This currently uses:
@@ -999,8 +1041,6 @@ print(
 
 ```{r}
 # PREDICTION PERFORMANCE BY MMI LEVEL
-library(dplyr)
-library(ggplot2)
 
 # Predict MMI on the test dataset
 pred_bc <- predict(final_lm, newdata = test_data)
@@ -1045,7 +1085,8 @@ mmi_results <- results |>
     MAE = mean(absolute_error),
     RMSE = sqrt(mean(squared_error)),
     mean_error = mean(error),
-    underprediction_rate = mean(error < 0) * 100,
+    'underpredicted(%)' = mean(error < 0) * 100,
+    'overpredicted(%)' = mean(error > 0) * 100,
     .groups = "drop"
   ) |>
   arrange(mmi_category)
@@ -1084,7 +1125,221 @@ ggplot(
   ) +
   theme_minimal()
 ```
+```{r}
+# DUAN'S SMEARING ESTIMATOR
+# Compare original and bias-corrected Box-Cox predictions
 
+# 1. GET TRAINING RESIDUALS
+# Residuals are on the Box-Cox transformed scale
+train_residuals <- residuals(final_lm)
+
+
+# 2. PREDICT TEST DATA ON BOX-COX SCALE
+pred_bc <- predict(
+  final_lm,
+  newdata = test_data
+)
+
+
+# 3. ORIGINAL PREDICTIONS
+pred_original <- inverse_boxcox(
+  pred_bc,
+  best_lambda_final
+)
+
+
+# 4. DUAN'S SMEARING CORRECTION
+# Average back-transformed predictions after adding
+# residuals from the training data
+smearing_predict <- function(
+  pred_bc,
+  residuals,
+  lambda
+) {
+
+  sapply(pred_bc, function(pred) {
+
+    adjusted <- inverse_boxcox(
+      pred + residuals,
+      lambda
+    )
+
+    if (any(!is.finite(adjusted))) {
+      return(NA_real_)
+    }
+
+    mean(adjusted)
+  })
+}
+
+pred_smeared <- smearing_predict(
+  pred_bc,
+  train_residuals,
+  best_lambda_final
+)
+
+
+# 5. CREATE COMPARISON DATASET
+smearing_results <- test_data |>
+  mutate(
+    predicted_original = pred_original,
+    predicted_smeared = pred_smeared,
+    mmi_category = floor(reported_mmi + 0.5)
+  ) |>
+  filter(
+    is.finite(predicted_original),
+    is.finite(predicted_smeared),
+    !is.na(reported_mmi)
+  )
+
+
+# 6. OVERALL PERFORMANCE COMPARISON
+smearing_overall <- smearing_results |>
+  summarise(
+    original_MAE = mean(
+      abs(predicted_original - reported_mmi)
+    ),
+
+    smeared_MAE = mean(
+      abs(predicted_smeared - reported_mmi)
+    ),
+
+    original_RMSE = sqrt(
+      mean((predicted_original - reported_mmi)^2)
+    ),
+
+    smeared_RMSE = sqrt(
+      mean((predicted_smeared - reported_mmi)^2)
+    )
+  )
+
+print(smearing_overall)
+
+
+# 7. PERFORMANCE BY OBSERVED MMI
+smearing_by_mmi <- smearing_results |>
+  group_by(mmi_category) |>
+  summarise(
+    n = n(),
+
+    original_MAE = mean(
+      abs(predicted_original - reported_mmi)
+    ),
+
+    smeared_MAE = mean(
+      abs(predicted_smeared - reported_mmi)
+    ),
+
+    original_mean_error = mean(
+      predicted_original - reported_mmi
+    ),
+
+    smeared_mean_error = mean(
+      predicted_smeared - reported_mmi
+    ),
+
+    original_underpredicted = mean(
+      predicted_original < reported_mmi
+    ) * 100,
+
+    smeared_underpredicted = mean(
+      predicted_smeared < reported_mmi
+    ) * 100,
+
+    .groups = "drop"
+  ) |>
+  arrange(mmi_category)
+
+print(smearing_by_mmi)
+
+
+# 8. PLOT MEAN ERROR COMPARISON
+smearing_plot_data <- smearing_by_mmi |>
+  select(
+    mmi_category,
+    original_mean_error,
+    smeared_mean_error
+  ) |>
+  tidyr::pivot_longer(
+    cols = c(original_mean_error, smeared_mean_error),
+    names_to = "method",
+    values_to = "mean_error"
+  )
+
+ggplot(
+  smearing_plot_data,
+  aes(
+    x = factor(mmi_category),
+    y = mean_error,
+    fill = method
+  )
+) +
+  geom_col(
+    position = "dodge"
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Effect of Duan's Smearing Correction",
+    x = "Observed MMI",
+    y = "Mean Prediction Error (MMI)",
+    fill = "Prediction method"
+  ) +
+  theme_minimal()
+```
+```{r}
+summary(final_lm)
+
+
+test_r2 <- 1 -
+  sum((test_data$reported_mmi - pred_lm)^2) /
+  sum((test_data$reported_mmi -
+         mean(test_data$reported_mmi))^2)
+
+print(test_r2)
+```
+
+```{r}
+# BASELINE MODEL COMPARISON
+
+actual <- test_data$reported_mmi
+
+baseline_mean <- rep(
+  mean(train_data$reported_mmi),
+  length(actual)
+)
+
+baseline_four <- rep(4, length(actual))
+
+evaluate <- function(predicted) {
+  c(
+    MAE = mean(abs(predicted - actual)),
+    RMSE = sqrt(mean((predicted - actual)^2))
+  )
+}
+
+baseline_results <- rbind(
+  "Training mean baseline" = evaluate(baseline_mean),
+  "MMI 4 baseline" = evaluate(baseline_four),
+  "Linear regression" = evaluate(pred_lm)
+)
+
+print(baseline_results)
+```
+
+
+```{r}
+results |>
+  summarise(
+    mean_error = mean(error),
+    median_absolute_error = median(absolute_error),
+    error_sd = sd(error),
+    underpredicted_percent = mean(error < 0) * 100,
+    overpredicted_percent = mean(error > 0) * 100
+  )
+```
 
 # Mapping
 ```{r}

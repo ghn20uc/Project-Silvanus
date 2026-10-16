@@ -15,6 +15,8 @@ library(gbm)
 library(arrow)
 library(pROC)
 library(caret)
+library(dplyr)
+library(ggplot2)
 ```
 
 Read file
@@ -929,7 +931,7 @@ cat("Xong. File nằm trong thư mục:", normalizePath("report_images/importanc
 ```
 
 ```{r}
-library(dplyr)
+# CLASSIFICATION PREDICTION PERFORMANCE BY MMI LEVEL
 
 # Create dataframe of actual and predicted MMI
 classification_results <- data.frame(
@@ -937,17 +939,30 @@ classification_results <- data.frame(
   predicted_mmi = as.numeric(as.character(boost_pred_w))
 ) |>
   mutate(
-    mmi_category = floor(actual_mmi + 0.5),
     error = predicted_mmi - actual_mmi,
     absolute_error = abs(error),
-    squared_error = error^2
+    squared_error = error^2,
+
+    # Group observations by observed MMI category
+    mmi_category = floor(actual_mmi + 0.5)
   ) |>
   filter(
-    !is.na(actual_mmi),
-    !is.na(predicted_mmi)
+    !is.na(predicted_mmi),
+    !is.na(actual_mmi)
   )
 
-# Calculate performance by actual MMI category
+
+# 1. OVERALL PERFORMANCE
+classification_overall_results <- classification_results |>
+  summarise(
+    MAE = mean(absolute_error),
+    RMSE = sqrt(mean(squared_error))
+  )
+
+print(classification_overall_results)
+
+
+# 2. PERFORMANCE BY OBSERVED MMI
 classification_mmi_results <- classification_results |>
   group_by(mmi_category) |>
   summarise(
@@ -955,16 +970,43 @@ classification_mmi_results <- classification_results |>
     MAE = mean(absolute_error),
     RMSE = sqrt(mean(squared_error)),
     mean_error = mean(error),
-    underprediction_rate = mean(error < 0) * 100,
+    `underpredicted(%)` = mean(error < 0) * 100,
+    `overpredicted(%)` = mean(error > 0) * 100,
     .groups = "drop"
-  )
+  ) |>
+  arrange(mmi_category)
 
 print(classification_mmi_results)
 
-# Overall RMSE and MAE
-classification_results |>
+
+# 3. MACRO-AVERAGED MAE
+# Gives each observed MMI category equal weight
+classification_macro_mae <- classification_mmi_results |>
+  filter(mmi_category %in% 3:8) |>
   summarise(
-    MAE = mean(absolute_error),
-    RMSE = sqrt(mean(squared_error))
+    macro_MAE = mean(MAE)
   )
+
+print(classification_macro_mae)
+
+
+# 4. PLOT ERROR BY OBSERVED MMI
+ggplot(
+  classification_mmi_results,
+  aes(
+    x = factor(mmi_category),
+    y = mean_error
+  )
+) +
+  geom_col(fill = "steelblue") +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Classification Prediction Error by Observed MMI",
+    x = "Observed MMI",
+    y = "Mean Prediction Error (MMI)"
+  ) +
+  theme_minimal()
 ```
