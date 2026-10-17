@@ -1,0 +1,5 @@
+check,status,detail
+model_input_location,Review,Both model sources still reference data_processed; EDA reads the current final_data directory. Model files are unchanged.
+saved_split_coverage,Review,4445 eligible classification cells have no saved training/test earthquake ID.
+split_agreement,Review,346 classification-eligible earthquakes differ between the saved split and seed-123 regression reconstruction.
+sample_definition,Documented,Regression: 106878 cells. Classification before saved-ID selection: 106877 cells.
