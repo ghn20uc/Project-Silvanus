@@ -35,12 +35,14 @@ earthquake_data_trim <- earthquake_data[, c(
   "Rhypo_km",
   "reported_mmi",
   "report_count",
-  "fault_style",
   "event_depth_km",
   "Repi_km",
   "report_longitude",
   "report_latitude"
-)]
+)] |>
+  na.omit()
+
+
 
 # Inspect dataset
 glimpse(earthquake_data_trim)
@@ -50,10 +52,7 @@ glimpse(earthquake_data_trim)
 colnames(earthquake_data_trim)
 
 table(earthquake_data_trim$reported_mmi)
-
-table(earthquake_data_trim$fault_style)
 ```
-
 
 ```{r}
 colSums(is.na(earthquake_data_trim))
@@ -73,7 +72,7 @@ earthquake_data_trim$reported_mmi <- ordered(earthquake_data_trim$reported_mmi, 
 summary(earthquake_data_trim)
 ```
 
-After summary their are quite some columns that actually the same: Mw_model, Mw, Mw_strict, remove and only keep one. Sanity check columns as has_moment_tensor and has_felt_rapid also being removed. Column fault_style is also changed into nominal data and NA change into "unknown" for tree model.
+After summary their are quite some columns that actually the same: Mw_model, Mw, Mw_strict, remove and only keep one. Sanity check columns as has_moment_tensor and has_felt_rapid also being removed.
 
 ```{r}
 earthquake_data_trim$log10_Vs30 <- log10(earthquake_data_trim$Vs30_m_s)
@@ -84,7 +83,6 @@ earthquake_data_trim <- earthquake_data_trim[, c("publicid",
                                        "Rhypo_km",
                                        "reported_mmi",
                                        "report_count",
-                                       "fault_style",
                                        "event_depth_km",
                                        "Repi_km",
                                        "report_longitude",
@@ -92,10 +90,6 @@ earthquake_data_trim <- earthquake_data_trim[, c("publicid",
                                        "log10_Vs30"
 )]
 
-
-earthquake_data_trim$fault_style[is.na(earthquake_data_trim$fault_style)] <- "unknown"
-
-earthquake_data_trim$fault_style <- factor(earthquake_data_trim$fault_style)
 ```
 
 ```{r}
@@ -116,7 +110,6 @@ earthquake_data_trim <- earthquake_data_trim[, c("publicid",
                                        "Rhypo_km",
                                        "reported_mmi",
                                        "report_count",
-                                       "fault_style",
                                        "event_depth_km",
                                        "Repi_km",
                                        "report_longitude",
@@ -242,7 +235,7 @@ min_class_size
 
 set.seed(1911)
 train_balanced <- downSample(
-  x = train[, c("Mw", "Rhypo_km", "fault_style", "event_depth_km", "Repi_km", "report_longitude", "report_latitude", "log10_Vs30")],
+  x = train[, c("Mw", "Rhypo_km", "event_depth_km", "Repi_km", "report_longitude", "report_latitude", "log10_Vs30")],
   y = train$reported_mmi, yname = "reported_mmi"
 )
 
@@ -303,7 +296,6 @@ prune_7_pred <- predict(prune_eq_7, test, type = 'class')
 
 table(prune_7_pred, test$reported_mmi)
 ```
-
 
 Three prune tree share the same confusing matrix.
 
