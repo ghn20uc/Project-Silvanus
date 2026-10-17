@@ -124,21 +124,30 @@ minimum_reports_per_earthquake <- 4
 
 
 data_sd <- data |>
-  filter(
-    report_count >= minimum_reports_per_cell
-  ) |>
+  filter(report_count >= minimum_reports_per_cell) |>
   group_by(publicid) |>
   mutate(
-    total_reports = sum(
-      report_count,
-      na.rm = TRUE
-    )
+    total_reports = sum(report_count, na.rm = TRUE)
   ) |>
-  filter(
-    total_reports >= minimum_reports_per_earthquake
-  ) |>
+  filter(total_reports >= minimum_reports_per_earthquake) |>
   ungroup() |>
-  na.omit()
+  filter(
+    if_all(
+      c(
+        publicid,
+        cell_id,
+        reported_mmi,
+        Mw,
+        event_depth_km,
+        Repi_km,
+        Vs30_m_s
+      ),
+      ~ !is.na(.x)
+    ),
+    Repi_km > 0,
+    Vs30_m_s > 0,
+    reported_mmi >= 3
+  )
 
 # CHECK LOG TRANSFORMATIONS
 stopifnot(
@@ -194,6 +203,7 @@ cat(
   n_distinct(test_data$publicid),
   "\n"
 )
+
 
 # BOX-COX FUNCTIONS
 boxcox_transform <- function(
@@ -319,41 +329,41 @@ for (i in 1:k) {
       fold == i
     )
 
-  # Find Box-Cox lambda using ONLY fold training data
-  bc_fit <- lm(
-    reported_mmi ~
-      event_depth_km +
-      Mw +
-      Repi_km +
-      Vs30_m_s,
-    data = fold_train
-  )
+  # # Find Box-Cox lambda using ONLY fold training data
+  # bc_fit <- lm(
+  #   reported_mmi ~
+  #     event_depth_km +
+  #     Mw +
+  #     Repi_km +
+  #     Vs30_m_s,
+  #   data = fold_train
+  # )
+  # 
+  # 
+  # bc <- MASS::boxcox(
+  #   bc_fit,
+  #   plotit = FALSE
+  # )
+  # 
+  # 
+  # fold_lambda <- bc$x[
+  #   which.max(bc$y)
+  # ]
 
-
-  bc <- MASS::boxcox(
-    bc_fit,
-    plotit = FALSE
-  )
-
-
-  fold_lambda <- bc$x[
-    which.max(bc$y)
-  ]
-
-  # Transform response
-  fold_train <- fold_train |>
-    mutate(
-      reported_mmi_bc =
-        boxcox_transform(
-          reported_mmi,
-          fold_lambda
-        )
-    )
+  # # Transform response
+  # fold_train <- fold_train |>
+  #   mutate(
+  #     reported_mmi_bc =
+  #       boxcox_transform(
+  #         reported_mmi,
+  #         fold_lambda
+  #       )
+  #   )
 
   # Model 1
   # Linear Repi + linear Vs30
   model_1 <- lm(
-    reported_mmi_bc ~
+    reported_mmi ~
       event_depth_km +
       Mw +
       Repi_km +
@@ -364,7 +374,7 @@ for (i in 1:k) {
   # Model 2
   # Log Repi + linear Vs30
   model_2 <- lm(
-    reported_mmi_bc ~
+    reported_mmi ~
       event_depth_km +
       Mw +
       log10(Repi_km) +
@@ -375,7 +385,7 @@ for (i in 1:k) {
   # Model 3
   # Linear Repi + log Vs30
   model_3 <- lm(
-    reported_mmi_bc ~
+    reported_mmi ~
       event_depth_km +
       Mw +
       Repi_km +
@@ -386,7 +396,7 @@ for (i in 1:k) {
   # Model 4
   # Log Repi + log Vs30
   model_4 <- lm(
-    reported_mmi_bc ~
+    reported_mmi ~
       event_depth_km +
       Mw +
       log10(Repi_km) +
@@ -397,7 +407,7 @@ for (i in 1:k) {
   # Model 5
   # Linear + log Repi + linear Vs30
   model_5 <- lm(
-    reported_mmi_bc ~
+    reported_mmi ~
       event_depth_km +
       Mw +
       Repi_km +
@@ -409,7 +419,7 @@ for (i in 1:k) {
   # Model 6
   # Linear + log Repi + log Vs30
   model_6 <- lm(
-    reported_mmi_bc ~
+    reported_mmi ~
       event_depth_km +
       Mw +
       Repi_km +
@@ -441,35 +451,14 @@ for (i in 1:k) {
 
   )
 
-  # Predict validation earthquakes
-  for (model_name in names(models)) {
+# Predict validation earthquakes
+for (model_name in names(models)) {
 
-    pred_bc <- predict(
-      models[[model_name]],
-      newdata = fold_validation
-    )
-
-
-    # Back-transform to original MMI scale
-    pred_mmi <- inverse_boxcox(
-      pred_bc,
-      fold_lambda
-    )
-    
-cat(
-  "Fold:", i,
-  "| Model:", model_name,
-  "| Total:", length(pred_mmi),
-  "| Missing predictions:", sum(is.na(pred_mmi)),
-  "| Invalid inverse domain:",
-  sum(
-    is.finite(pred_bc) &
-      1 + fold_lambda * pred_bc <= 0
-  ),
-  "\n"
-)
-
-
+  pred_mmi <- predict(
+    models[[model_name]],
+    newdata = fold_validation
+  )
+  
     # Calculate RMSE
     rmse <- sqrt(
       mean(
@@ -482,14 +471,12 @@ cat(
     )
 
 
-    # Save result
-    cv_lr_results <- bind_rows(
-      cv_lr_results,
-      tibble(
-        fold = i,
-        model = model_name,
-        lambda = fold_lambda,
-        RMSE = rmse
+  cv_lr_results <- bind_rows(
+    cv_lr_results,
+    tibble(
+      fold = i,
+      model = model_name,
+      RMSE = rmse
       )
     )
 
@@ -717,47 +704,42 @@ for (i in 1:k) {
     )
 
   # Raw MMI model
-  model_raw <- lmer(
-    reported_mmi ~
-      event_depth_km +
-      Mw +
-      log10(Repi_km) +
-      Vs30_m_s +
-      (1 + log10(Repi_km) | publicid),
-    data = fold_train,
-    REML = FALSE
-  )
+  model_raw <- lm(
+  reported_mmi ~
+    event_depth_km +
+    Mw +
+    Repi_km +
+    log10(Repi_km) +
+    Vs30_m_s,
+  data = fold_train
+)
 
   # Log MMI model
-  model_log <- lmer(
-    log(reported_mmi) ~
-      event_depth_km +
-      Mw +
-      log10(Repi_km) +
-      Vs30_m_s +
-      (1 + log10(Repi_km) | publicid),
-    data = fold_train,
-    REML = FALSE
+  model_log <- lm(
+    log(reported_mmi)  ~
+    event_depth_km +
+    Mw +
+    Repi_km +
+    log10(Repi_km) +
+    Vs30_m_s,
+  data = fold_train
   )
 
   # Box-Cox MMI model
-  model_bc <- lmer(
+  model_bc <- lm(
     reported_mmi_bc ~
       event_depth_km +
       Mw +
+      Repi_km +
       log10(Repi_km) +
-      Vs30_m_s +
-      (1 + log10(Repi_km) | publicid),
-    data = fold_train,
-    REML = FALSE
+      Vs30_m_s,
+    data = fold_train
   )
 
   # Raw predictions
   pred_raw <- predict(
     model_raw,
-    newdata = fold_validation,
-    re.form = NA,
-    allow.new.levels = TRUE
+    newdata = fold_validation
   )
 
   # Log predictions
@@ -765,18 +747,14 @@ for (i in 1:k) {
   pred_log <- exp(
     predict(
       model_log,
-      newdata = fold_validation,
-      re.form = NA,
-      allow.new.levels = TRUE
+      newdata = fold_validation
     )
   )
 
   # Box-Cox predictions
   pred_bc_transformed <- predict(
     model_bc,
-    newdata = fold_validation,
-    re.form = NA,
-    allow.new.levels = TRUE
+    newdata = fold_validation
   )
 
 
@@ -907,14 +885,14 @@ train_data <- train_data |>
 
 # FINAL LINEAR MODEL
 
-# This currently uses the Model 6 structure.
+# Uses Model 5: linear and log10 epicentral distance, with linear Vs30.
 final_lm <- lm(
-  reported_mmi_bc_final ~
+  reported_mmi ~
     event_depth_km +
     Mw +
     Repi_km +
     log10(Repi_km) +
-   log10(Vs30_m_s),
+   Vs30_m_s,
   data = train_data
 )
 
@@ -989,22 +967,12 @@ isSingular(
 
 # FINAL TEST DATA EVALUATION
 
-# Linear model
-pred_lm_bc <- predict(
+# Linear model predicts directly in MMI units
+pred_lm <- predict(
   final_lm,
   newdata = test_data
 )
 
-
-pred_lm <- inverse_boxcox(
-  pred_lm_bc,
-  best_lambda_final
-)
-
-# Mixed-effects model
-
-# re.form = NA excludes earthquake-specific random effects,
-# because these are unseen earthquakes.
 pred_mixed <- predict(
   final_mixed,
   newdata = test_data,
@@ -1012,55 +980,32 @@ pred_mixed <- predict(
   allow.new.levels = TRUE
 )
 
-# Final RMSE
-rmse_lm <- sqrt(
-  mean(
-    (
-      test_data$reported_mmi -
-        pred_lm
-    )^2,
-    na.rm = TRUE
-  )
-)
+# Calculate RMSE
+rmse_lm <- sqrt(mean(
+  (test_data$reported_mmi - pred_lm)^2
+))
 
+rmse_mixed <- sqrt(mean(
+  (test_data$reported_mmi - pred_mixed)^2
+))
 
-rmse_mixed <- sqrt(
-  mean(
-    (
-      test_data$reported_mmi -
-        pred_mixed
-    )^2,
-    na.rm = TRUE
-  )
-)
-
-# Final comparison
+# Compare models
 final_results <- tibble(
-  Model = c(
-    "Linear model",
-    "Mixed-effects model"
-  ),
-  RMSE = c(
-    rmse_lm,
-    rmse_mixed
-  )
+  Model = c("Linear model", "Mixed-effects model"),
+  RMSE = c(rmse_lm, rmse_mixed)
 ) |>
   arrange(RMSE)
 
-print(
-  final_results
-)
+print(final_results)
 ```
 
 ```{r}
 # PREDICTION PERFORMANCE BY MMI LEVEL
 
 # Predict MMI on the test dataset
-pred_bc <- predict(final_lm, newdata = test_data)
-
-pred_mmi <- inverse_boxcox(
-  pred_bc,
-  best_lambda_final
+pred_mmi <- predict(
+  final_lm,
+  newdata = test_data
 )
 
 # Create evaluation dataset
@@ -1139,188 +1084,226 @@ ggplot(
   theme_minimal()
 ```
 ```{r}
-# DUAN'S SMEARING ESTIMATOR
-# Compare original and bias-corrected Box-Cox predictions
+# TABLE 3: MMI DISTRIBUTION
 
-# 1. GET TRAINING RESIDUALS
-# Residuals are on the Box-Cox transformed scale
-train_residuals <- residuals(final_lm)
-
-
-# 2. PREDICT TEST DATA ON BOX-COX SCALE
-pred_bc <- predict(
-  final_lm,
-  newdata = test_data
-)
-
-
-# 3. ORIGINAL PREDICTIONS
-pred_original <- inverse_boxcox(
-  pred_bc,
-  best_lambda_final
-)
-
-
-# 4. DUAN'S SMEARING CORRECTION
-# Average back-transformed predictions after adding
-# residuals from the training data
-smearing_predict <- function(
-  pred_bc,
-  residuals,
-  lambda
-) {
-
-  sapply(pred_bc, function(pred) {
-
-    # Add training residuals to prediction
-    adjusted_bc <- pred + residuals
-
-    # Check which values can be back-transformed
-    if (abs(lambda) < 1e-8) {
-
-      valid <- is.finite(adjusted_bc)
-
-    } else {
-
-      valid <- is.finite(adjusted_bc) &
-        (1 + lambda * adjusted_bc > 0)
-
-    }
-
-    # If no valid combinations remain
-    if (!any(valid)) {
-      return(NA_real_)
-    }
-
-    # Back-transform only valid combinations
-    adjusted <- inverse_boxcox(
-      adjusted_bc[valid],
-      lambda
-    )
-
-    # Average back-transformed values
-    mean(adjusted)
-
-  })
-}
-
-# Calculate Duan's smearing-corrected predictions
-pred_smeared <- smearing_predict(
-  pred_bc,
-  train_residuals,
-  best_lambda_final
-)
-
-# 5. CREATE COMPARISON DATASET
-smearing_results <- test_data |>
+table3 <- bind_rows(
+  train_data |> mutate(dataset = "Training"),
+  test_data |> mutate(dataset = "Testing")
+) |>
+  count(reported_mmi, dataset) |>
+  pivot_wider(
+    names_from = dataset,
+    values_from = n,
+    values_fill = 0
+  ) |>
   mutate(
-    predicted_original = pred_original,
-    predicted_smeared = pred_smeared,
-    mmi_category = floor(reported_mmi + 0.5)
+    Total = Training + Testing
   ) |>
-  filter(
-    is.finite(predicted_original),
-    is.finite(predicted_smeared),
-    !is.na(reported_mmi)
-  )
-
-
-# 6. OVERALL PERFORMANCE COMPARISON
-smearing_overall <- smearing_results |>
-  summarise(
-    original_MAE = mean(
-      abs(predicted_original - reported_mmi)
-    ),
-
-    smeared_MAE = mean(
-      abs(predicted_smeared - reported_mmi)
-    ),
-
-    original_RMSE = sqrt(
-      mean((predicted_original - reported_mmi)^2)
-    ),
-
-    smeared_RMSE = sqrt(
-      mean((predicted_smeared - reported_mmi)^2)
-    )
-  )
-
-print(smearing_overall)
-
-
-# 7. PERFORMANCE BY OBSERVED MMI
-smearing_by_mmi <- smearing_results |>
-  group_by(mmi_category) |>
-  summarise(
-    n = n(),
-
-    original_MAE = mean(
-      abs(predicted_original - reported_mmi)
-    ),
-
-    smeared_MAE = mean(
-      abs(predicted_smeared - reported_mmi)
-    ),
-
-    original_mean_error = mean(
-      predicted_original - reported_mmi
-    ),
-
-    smeared_mean_error = mean(
-      predicted_smeared - reported_mmi
-    ),
-
-    original_underpredicted = mean(
-      predicted_original < reported_mmi
-    ) * 100,
-
-    smeared_underpredicted = mean(
-      predicted_smeared < reported_mmi
-    ) * 100,
-
-    .groups = "drop"
-  ) |>
-  arrange(mmi_category)
-
-print(smearing_by_mmi)
-
-
-# 8. PLOT MEAN ERROR COMPARISON
-smearing_plot_data <- smearing_by_mmi |>
   select(
-    mmi_category,
-    original_mean_error,
-    smeared_mean_error
+    MMI = reported_mmi,
+    Total,
+    Training,
+    Testing
   ) |>
-  tidyr::pivot_longer(
-    cols = c(original_mean_error, smeared_mean_error),
-    names_to = "method",
-    values_to = "mean_error"
-  )
+  arrange(MMI)
 
-ggplot(
-  smearing_plot_data,
-  aes(
-    x = factor(mmi_category),
-    y = mean_error,
-    fill = method
-  )
-) +
-  geom_col(
-    position = "dodge"
-  ) +
-  geom_hline(
-    yintercept = 0,
-    linetype = "dashed"
-  ) +
-  labs(
-    title = "Effect of Duan's Smearing Correction",
-    x = "Observed MMI",
-    y = "Mean Prediction Error (MMI)",
-    fill = "Prediction method"
-  ) +
-  theme_minimal()
+table3 <- bind_rows(
+  table3,
+  table3 |>
+    summarise(
+      MMI = NA_real_,
+      across(-MMI, sum)
+    )
+)
+
+print(table3, n = Inf)
 ```
+
+```{r}
+# # DUAN'S SMEARING ESTIMATOR
+# # Compare original and bias-corrected Box-Cox predictions
+# 
+# # 1. GET TRAINING RESIDUALS
+# # Residuals are on the Box-Cox transformed scale
+# train_residuals <- residuals(final_lm)
+# 
+# 
+# # 2. PREDICT TEST DATA ON BOX-COX SCALE
+# pred_bc <- predict(
+#   final_lm,
+#   newdata = test_data
+# )
+# 
+# 
+# # 3. ORIGINAL PREDICTIONS
+# pred_original <- inverse_boxcox(
+#   pred_bc,
+#   best_lambda_final
+# )
+# 
+# 
+# # 4. DUAN'S SMEARING CORRECTION
+# # Average back-transformed predictions after adding
+# # residuals from the training data
+# smearing_predict <- function(
+#   pred_bc,
+#   residuals,
+#   lambda
+# ) {
+# 
+#   sapply(pred_bc, function(pred) {
+# 
+#     # Add training residuals to prediction
+#     adjusted_bc <- pred + residuals
+# 
+#     # Check which values can be back-transformed
+#     if (abs(lambda) < 1e-8) {
+# 
+#       valid <- is.finite(adjusted_bc)
+# 
+#     } else {
+# 
+#       valid <- is.finite(adjusted_bc) &
+#         (1 + lambda * adjusted_bc > 0)
+# 
+#     }
+# 
+#     # If no valid combinations remain
+#     if (!any(valid)) {
+#       return(NA_real_)
+#     }
+# 
+#     # Back-transform only valid combinations
+#     adjusted <- inverse_boxcox(
+#       adjusted_bc[valid],
+#       lambda
+#     )
+# 
+#     # Average back-transformed values
+#     mean(adjusted)
+# 
+#   })
+# }
+# 
+# # Calculate Duan's smearing-corrected predictions
+# pred_smeared <- smearing_predict(
+#   pred_bc,
+#   train_residuals,
+#   best_lambda_final
+# )
+# 
+# # 5. CREATE COMPARISON DATASET
+# smearing_results <- test_data |>
+#   mutate(
+#     predicted_original = pred_original,
+#     predicted_smeared = pred_smeared,
+#     mmi_category = floor(reported_mmi + 0.5)
+#   ) |>
+#   filter(
+#     is.finite(predicted_original),
+#     is.finite(predicted_smeared),
+#     !is.na(reported_mmi)
+#   )
+# 
+# 
+# # 6. OVERALL PERFORMANCE COMPARISON
+# smearing_overall <- smearing_results |>
+#   summarise(
+#     original_MAE = mean(
+#       abs(predicted_original - reported_mmi)
+#     ),
+# 
+#     smeared_MAE = mean(
+#       abs(predicted_smeared - reported_mmi)
+#     ),
+# 
+#     original_RMSE = sqrt(
+#       mean((predicted_original - reported_mmi)^2)
+#     ),
+# 
+#     smeared_RMSE = sqrt(
+#       mean((predicted_smeared - reported_mmi)^2)
+#     )
+#   )
+# 
+# print(smearing_overall)
+# 
+# 
+# # 7. PERFORMANCE BY OBSERVED MMI
+# smearing_by_mmi <- smearing_results |>
+#   group_by(mmi_category) |>
+#   summarise(
+#     n = n(),
+# 
+#     original_MAE = mean(
+#       abs(predicted_original - reported_mmi)
+#     ),
+# 
+#     smeared_MAE = mean(
+#       abs(predicted_smeared - reported_mmi)
+#     ),
+# 
+#     original_mean_error = mean(
+#       predicted_original - reported_mmi
+#     ),
+# 
+#     smeared_mean_error = mean(
+#       predicted_smeared - reported_mmi
+#     ),
+# 
+#     original_underpredicted = mean(
+#       predicted_original < reported_mmi
+#     ) * 100,
+# 
+#     smeared_underpredicted = mean(
+#       predicted_smeared < reported_mmi
+#     ) * 100,
+# 
+#     .groups = "drop"
+#   ) |>
+#   arrange(mmi_category)
+# 
+# print(smearing_by_mmi)
+# 
+# 
+# # 8. PLOT MEAN ERROR COMPARISON
+# smearing_plot_data <- smearing_by_mmi |>
+#   select(
+#     mmi_category,
+#     original_mean_error,
+#     smeared_mean_error
+#   ) |>
+#   tidyr::pivot_longer(
+#     cols = c(original_mean_error, smeared_mean_error),
+#     names_to = "method",
+#     values_to = "mean_error"
+#   )
+# 
+# ggplot(
+#   smearing_plot_data,
+#   aes(
+#     x = factor(mmi_category),
+#     y = mean_error,
+#     fill = method
+#   )
+# ) +
+#   geom_col(
+#     position = "dodge"
+#   ) +
+#   geom_hline(
+#     yintercept = 0,
+#     linetype = "dashed"
+#   ) +
+#   labs(
+#     title = "Effect of Duan's Smearing Correction",
+#     x = "Observed MMI",
+#     y = "Mean Prediction Error (MMI)",
+#     fill = "Prediction method"
+#   ) +
+#   theme_minimal()
+```
+
+
 ```{r}
 summary(final_lm)
 
@@ -1360,7 +1343,45 @@ baseline_results <- rbind(
 
 print(baseline_results)
 ```
+```{r}
+# Data actually used to fit the final model
+model_data <- model.frame(final_lm)
 
+# Full model
+full_model <- final_lm
+
+# Models excluding one predictor group at a time
+reduced_models <- list(
+  "Epicentral distance" = update(
+    full_model, . ~ . - Repi_km - log10(Repi_km)
+  ),
+  "Magnitude (Mw)" = update(
+    full_model, . ~ . - Mw
+  ),
+  "Depth" = update(
+    full_model, . ~ . - event_depth_km
+  ),
+  "Vs30" = update(
+    full_model, . ~ . - Vs30_m_s
+  )
+)
+
+# Calculate importance
+importance <- data.frame(
+  Variable = names(reduced_models),
+  Partial_R2 = sapply(reduced_models, function(m) {
+    (deviance(m) - deviance(full_model)) / deviance(m)
+  })
+)
+
+importance <- importance |>
+  dplyr::mutate(
+    Partial_R2 = round(Partial_R2, 4)
+  ) |>
+  dplyr::arrange(desc(Partial_R2))
+
+print(importance)
+```
 
 ```{r}
 results |>
@@ -1410,7 +1431,7 @@ nzmap <- st_read("nzmap/regional-council-2025-clipped.gpkg")
 # MAP OBSERVED AND PREDICTED MMI FOR ONE EARTHQUAKE
 
 # Choose earthquake
-earthquake_id <- "2024p753169"
+earthquake_id <- "2023p122368"
 
 # GET EARTHQUAKE DATA
 eq_data <- data_sd |>
@@ -1424,17 +1445,10 @@ stopifnot(
 
 # PREDICT MMI AT ACTUAL FELT RAPID LOCATIONS
 
-# Predict on Box-Cox scale using final selected linear model
-eq_pred_bc <- predict(
+# Predict MMI directly at Felt RAPID locations
+eq_data$predicted_mmi <- predict(
   final_lm,
   newdata = eq_data
-)
-
-
-# Convert back to original MMI scale
-eq_data$predicted_mmi <- inverse_boxcox(
-  eq_pred_bc,
-  best_lambda_final
 )
 
 # CONVERT FELT RAPID LOCATIONS TO SPATIAL POINTS
@@ -1561,17 +1575,10 @@ prediction_data <- tibble(
 
 # PREDICT MMI
 
-# Predict on Box-Cox scale
-prediction_bc <- predict(
+# Predict raw MMI
+prediction_data$predicted_mmi <- predict(
   final_lm,
   newdata = prediction_data
-)
-
-
-# Convert predictions back to original MMI scale
-prediction_data$predicted_mmi <- inverse_boxcox(
-  prediction_bc,
-  best_lambda_final
 )
 
 # PREDICTION RANGE
@@ -1837,8 +1844,14 @@ data_sd |>
 # mw_value <- 8
 # depth <- 10
 
+# Hikurangi fault
+# event_longitude <- 177.2
+# event_latitude <- -40.5
+# mw_value <- 8.5
+# depth <- 15
+
 # HYPOTHETICAL EARTHQUAKE SETTINGS
-earthquake_name <- "Hypothetical Alpine Fault Earthquake"
+earthquake_name <- "Hypothetical Alpine Earthquake"
 
 event_longitude <- 171
 event_latitude <- -42.7
@@ -1923,15 +1936,9 @@ prediction_data <- tibble(
 )
 
 
-# PREDICT MMI USING FINAL LINEAR MODEL
-prediction_bc <- predict(
+prediction_data$predicted_mmi <- predict(
   final_lm,
   newdata = prediction_data
-)
-
-prediction_data$predicted_mmi <- inverse_boxcox(
-  prediction_bc,
-  best_lambda_final
 )
 
 
