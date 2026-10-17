@@ -24,7 +24,7 @@ Read file
 ```{r}
 # Load earthquake data
 earthquake_data <- read_parquet(
-  "../data_processed/NZ_FR_IAR_final_dataset.parquet"
+  "../final_data/NZ_FR_IAR_final_dataset.parquet"
 )
 
 # Create classification dataframe
@@ -59,7 +59,10 @@ colSums(is.na(earthquake_data_trim))
 
 earthquake_data_trim <- earthquake_data_trim[earthquake_data_trim$reported_mmi >= 3, ]
 
-#table(earthquake_data_trim$reported_mmi)
+table(earthquake_data_trim$reported_mmi)
+```
+```{r}
+nrow(earthquake_data_trim)  
 ```
 
 Changing MMI to ordinal data
@@ -147,7 +150,16 @@ cat("Test observations:", nrow(test), "\n")
 train$publicid <- NULL
 test$publicid <- NULL
 ```
+```{r}
+table(earthquake_data_trim$reported_mmi)
+```
+```{r}
+table(train$reported_mmi)
+```
 
+```{r}
+table(test$reported_mmi)
+```
 ## Function for models evaluation
 
 ```{r}
