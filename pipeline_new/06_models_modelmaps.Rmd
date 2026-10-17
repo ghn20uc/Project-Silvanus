@@ -145,7 +145,8 @@ data_sd <- data |>
       ~ !is.na(.x)
     ),
     Repi_km > 0,
-    Vs30_m_s > 0
+    Vs30_m_s > 0,
+    reported_mmi >= 3
   )
 
 # CHECK LOG TRANSFORMATIONS
