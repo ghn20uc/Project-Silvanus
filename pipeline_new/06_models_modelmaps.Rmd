@@ -124,21 +124,30 @@ minimum_reports_per_earthquake <- 4
 
 
 data_sd <- data |>
-  filter(
-    report_count >= minimum_reports_per_cell
-  ) |>
+  filter(report_count >= minimum_reports_per_cell) |>
   group_by(publicid) |>
   mutate(
-    total_reports = sum(
-      report_count,
-      na.rm = TRUE
-    )
+    total_reports = sum(report_count, na.rm = TRUE)
   ) |>
-  filter(
-    total_reports >= minimum_reports_per_earthquake
-  ) |>
+  filter(total_reports >= minimum_reports_per_earthquake) |>
   ungroup() |>
-  na.omit()
+  filter(
+    if_all(
+      c(
+        publicid,
+        cell_id,
+        reported_mmi,
+        Mw,
+        event_depth_km,
+        Repi_km,
+        Vs30_m_s
+      ),
+      ~ !is.na(.x)
+    ),
+    Repi_km > 0,
+    Vs30_m_s > 0,
+    reported_mmi >= 3
+  )
 
 # CHECK LOG TRANSFORMATIONS
 stopifnot(
@@ -695,47 +704,42 @@ for (i in 1:k) {
     )
 
   # Raw MMI model
-  model_raw <- lmer(
-    reported_mmi ~
-      event_depth_km +
-      Mw +
-      log10(Repi_km) +
-      Vs30_m_s +
-      (1 + log10(Repi_km) | publicid),
-    data = fold_train,
-    REML = FALSE
-  )
+  model_raw <- lm(
+  reported_mmi ~
+    event_depth_km +
+    Mw +
+    Repi_km +
+    log10(Repi_km) +
+    Vs30_m_s,
+  data = fold_train
+)
 
   # Log MMI model
-  model_log <- lmer(
-    log(reported_mmi) ~
-      event_depth_km +
-      Mw +
-      log10(Repi_km) +
-      Vs30_m_s +
-      (1 + log10(Repi_km) | publicid),
-    data = fold_train,
-    REML = FALSE
+  model_log <- lm(
+    log(reported_mmi)  ~
+    event_depth_km +
+    Mw +
+    Repi_km +
+    log10(Repi_km) +
+    Vs30_m_s,
+  data = fold_train
   )
 
   # Box-Cox MMI model
-  model_bc <- lmer(
+  model_bc <- lm(
     reported_mmi_bc ~
       event_depth_km +
       Mw +
+      Repi_km +
       log10(Repi_km) +
-      Vs30_m_s +
-      (1 + log10(Repi_km) | publicid),
-    data = fold_train,
-    REML = FALSE
+      Vs30_m_s,
+    data = fold_train
   )
 
   # Raw predictions
   pred_raw <- predict(
     model_raw,
-    newdata = fold_validation,
-    re.form = NA,
-    allow.new.levels = TRUE
+    newdata = fold_validation
   )
 
   # Log predictions
@@ -743,18 +747,14 @@ for (i in 1:k) {
   pred_log <- exp(
     predict(
       model_log,
-      newdata = fold_validation,
-      re.form = NA,
-      allow.new.levels = TRUE
+      newdata = fold_validation
     )
   )
 
   # Box-Cox predictions
   pred_bc_transformed <- predict(
     model_bc,
-    newdata = fold_validation,
-    re.form = NA,
-    allow.new.levels = TRUE
+    newdata = fold_validation
   )
 
 
@@ -973,7 +973,6 @@ pred_lm <- predict(
   newdata = test_data
 )
 
-# Mixed-effects model
 pred_mixed <- predict(
   final_mixed,
   newdata = test_data,
@@ -1084,6 +1083,42 @@ ggplot(
   ) +
   theme_minimal()
 ```
+```{r}
+# TABLE 3: MMI DISTRIBUTION
+
+table3 <- bind_rows(
+  train_data |> mutate(dataset = "Training"),
+  test_data |> mutate(dataset = "Testing")
+) |>
+  count(reported_mmi, dataset) |>
+  pivot_wider(
+    names_from = dataset,
+    values_from = n,
+    values_fill = 0
+  ) |>
+  mutate(
+    Total = Training + Testing
+  ) |>
+  select(
+    MMI = reported_mmi,
+    Total,
+    Training,
+    Testing
+  ) |>
+  arrange(MMI)
+
+table3 <- bind_rows(
+  table3,
+  table3 |>
+    summarise(
+      MMI = NA_real_,
+      across(-MMI, sum)
+    )
+)
+
+print(table3, n = Inf)
+```
+
 ```{r}
 # # DUAN'S SMEARING ESTIMATOR
 # # Compare original and bias-corrected Box-Cox predictions
@@ -1308,7 +1343,45 @@ baseline_results <- rbind(
 
 print(baseline_results)
 ```
+```{r}
+# Data actually used to fit the final model
+model_data <- model.frame(final_lm)
 
+# Full model
+full_model <- final_lm
+
+# Models excluding one predictor group at a time
+reduced_models <- list(
+  "Epicentral distance" = update(
+    full_model, . ~ . - Repi_km - log10(Repi_km)
+  ),
+  "Magnitude (Mw)" = update(
+    full_model, . ~ . - Mw
+  ),
+  "Depth" = update(
+    full_model, . ~ . - event_depth_km
+  ),
+  "Vs30" = update(
+    full_model, . ~ . - Vs30_m_s
+  )
+)
+
+# Calculate importance
+importance <- data.frame(
+  Variable = names(reduced_models),
+  Partial_R2 = sapply(reduced_models, function(m) {
+    (deviance(m) - deviance(full_model)) / deviance(m)
+  })
+)
+
+importance <- importance |>
+  dplyr::mutate(
+    Partial_R2 = round(Partial_R2, 4)
+  ) |>
+  dplyr::arrange(desc(Partial_R2))
+
+print(importance)
+```
 
 ```{r}
 results |>

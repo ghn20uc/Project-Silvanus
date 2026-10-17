@@ -40,7 +40,9 @@ earthquake_data_trim <- earthquake_data[, c(
   "report_longitude",
   "report_latitude"
 )] |>
-  na.omit()
+  na.omit() |>
+  filter(reported_mmi >= 3)
+
 
 
 
