@@ -1,4 +1,33 @@
 # Shared validation and summaries for DATA309_EDA.R; no files are changed here.
+# Approved preparation expression from 06_models_modelmaps.Rmd. Comparing parsed
+# expressions catches changes to fields, cutoffs and filter order, not formatting.
+regression_preparation <- quote(data |>
+  filter(report_count >= minimum_reports_per_cell) |>
+  group_by(publicid) |>
+  mutate(total_reports = sum(report_count, na.rm = TRUE)) |>
+  filter(total_reports >= minimum_reports_per_earthquake) |>
+  ungroup() |>
+  filter(if_all(c(publicid, cell_id, reported_mmi, Mw, event_depth_km,
+    Repi_km, Vs30_m_s), ~ !is.na(.x)),
+    Repi_km > 0, Vs30_m_s > 0, reported_mmi >= 3))
+
+notebook_assignment <- function(text, name) {
+  inside <- FALSE; code <- character(); found <- list()
+  for (line in strsplit(text, "\n", fixed = TRUE)[[1]]) {
+    if (grepl("^```\\{r", line)) {
+      inside <- TRUE; code <- character()
+    } else if (inside && grepl("^```\\s*$", line)) {
+      for (expr in parse(text = code)) {
+        if (is.call(expr) && identical(expr[[1]], as.name("<-")) &&
+            identical(expr[[2]], as.name(name))) found[[length(found) + 1L]] <- expr[[3]]
+      }
+      inside <- FALSE
+    } else if (inside) code <- c(code, line)
+  }
+  if (length(found) != 1L) stop("Expected one notebook assignment to ", name)
+  found[[1]]
+}
+
 require_columns <- function(data, columns, label) {
   missing <- setdiff(columns, names(data))
   if (length(missing)) stop(label, " is missing: ", paste(missing, collapse = ", "))

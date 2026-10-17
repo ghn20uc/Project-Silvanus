@@ -39,6 +39,7 @@ inputs <- c(base = file.path(data_dir, "NZ_FR_IAR_dataset.parquet"),
   test_ids = file.path(script_dir, "data_raw/test_earthquake_ids.rds"),
   regression_source = file.path(script_dir, "06_models_modelmaps.Rmd"),
   classification_source = file.path(script_dir, "07_trees.qmd"),
+  dataset_builder = file.path(root, "data_collection_pipeline_final/04_build_nz_fr_iar_dataset.R"),
   eda_source = file.path(script_dir, "DATA309_EDA.R"),
   eda_helpers = file.path(script_dir, "eda_helpers.R"))
 if (any(!file.exists(inputs))) stop("Missing input: ", paste(inputs[!file.exists(inputs)], collapse = ", "))
@@ -74,15 +75,21 @@ contracts <- c(
   grepl("filter\\(report_count >= 4\\)", class_source),
   grepl("levels = 3:8", class_source, fixed = TRUE))
 if (!all(contracts)) stop("Model preparation constants changed; update the EDA sample rules before running")
+if (!identical(notebook_assignment(reg_source, "data_sd"), regression_preparation)) {
+  stop("Regression preparation changed; review the EDA fields and filtering rules before running")
+}
 
 # Match the current preparation rules without executing or editing model notebooks.
-# Regression: >=4 reports per cell, >=4 reports per event, then complete cases.
+# Regression: >=4 reports per cell/event, complete selected fields, positive
+# epicentral distance and Vs30, and MMI >=3. Match the approved notebook expression.
 # The event threshold is redundant here because each retained cell already has >=4.
 # Classification: complete cases in its selected columns, MMI>=3, ordered levels3:8,
 # >=4 reports, then the saved IDs. A fractional MMI is not silently rounded.
 class_fields <- c("publicid", "Mw", "Vs30_m_s", "Rhypo_km", "reported_mmi",
   "report_count", "event_depth_km", "Repi_km", "report_longitude", "report_latitude")
-regression <- site |> filter(report_count >= 4) |> filter(complete.cases(pick(everything())))
+regression <- eval(regression_preparation, envir = list(data = site,
+  minimum_reports_per_cell = 4, minimum_reports_per_earthquake = 4)) |>
+  select(all_of(names(site)))
 classification <- site[complete.cases(site[class_fields]), ] |>
   filter(report_count >= 4, reported_mmi >= 3)
 if (any(!classification$reported_mmi %in% 3:8)) {
@@ -122,6 +129,8 @@ save_plot <- function(plot, name, width = 9, height = 5.5) {
 
 stages <- list(pre_site = base, final_with_site = site,
   report_count_ge4 = filter(site, report_count >= 4), regression_eligible = regression,
+  regression_train = filter(regression, publicid %in% reg_train),
+  regression_test = filter(regression, !publicid %in% reg_train),
   classification_eligible = classification,
   classification_train = filter(classification, saved_classification_split == "Train"),
   classification_test = filter(classification, saved_classification_split == "Test"),
@@ -141,6 +150,8 @@ write_table(tibble(metric = c("catalogue_earthquakes", "catalogue_with_Mw", "fin
 write_table(split_audit, "01_earthquake_split_audit")
 write_table(count(classification, saved_classification_split, reported_mmi, name = "earthquake_cells"),
   "01_split_mmi_counts")
+write_table(regression |> mutate(split = if_else(publicid %in% reg_train, "Train", "Test")) |>
+  count(split, reported_mmi, name = "earthquake_cells"), "01_regression_split_mmi_counts")
 write_table(count(filter(split_audit, classification_eligible), saved_classification_split,
   reconstructed_regression_split, name = "earthquakes"), "01_split_comparison")
 
@@ -153,7 +164,7 @@ plot_mmi <- filter(mmi, stage %in% c("final_with_site", "regression_eligible", "
 save_plot(ggplot(plot_mmi, aes(factor(reported_mmi), earthquake_cells)) +
   geom_col(fill = "#217c83") + facet_wrap(~stage, ncol = 1, scales = "free_y") +
   labs(title = "Reported MMI across sample definitions", x = "Median reported MMI",
-    y = "Earthquake-cell observations", caption = "No rounding or removal of low MMI values in the regression sample."),
+    y = "Earthquake-cell observations", caption = "Both model preparations require MMI >= 3. The final dataset retains the lower values."),
   "02_mmi_distribution", height = 8)
 
 missingness <- bind_rows(lapply(c("pre_site", "final_with_site", "report_count_ge4"), function(nm) {
@@ -275,12 +286,26 @@ write_table(availability, "12_analysis_availability")
 unassigned <- sum(classification$saved_classification_split == "Unassigned")
 comp <- filter(split_audit, classification_eligible)
 disagree <- sum(comp$saved_classification_split != comp$reconstructed_regression_split)
-write_table(tibble(check = c("model_input_location", "saved_split_coverage", "split_agreement", "sample_definition"),
-  status = c("Review", if (unassigned) "Review" else "Pass", if (disagree) "Review" else "Pass", "Documented"),
-  detail = c("Both model sources still reference data_processed; EDA reads the current final_data directory. Model files are unchanged.",
+same_eligible <- setequal(key(regression), key(classification))
+reg_old_path <- grepl('"data_processed"', reg_source, fixed = TRUE)
+class_current_path <- grepl('"../final_data/NZ_FR_IAR_final_dataset.parquet"', class_source, fixed = TRUE)
+builder_source <- paste(readLines(inputs[["dataset_builder"]], warn = FALSE), collapse = "\n")
+strict_mw35 <- grepl("minimum_moment_magnitude\\s*<-\\s*3\\.5\\b", builder_source, perl = TRUE) &&
+  grepl("Mw\\s*>\\s*minimum_moment_magnitude", builder_source, perl = TRUE)
+mw_conflicts <- if (strict_mw35) sum(site$Mw <= 3.5, na.rm = TRUE) else NA_integer_
+write_table(tibble(check = c("regression_input_location", "classification_input_location",
+    "saved_split_coverage", "split_agreement", "sample_definition", "upstream_magnitude_filter"),
+  status = c(if (reg_old_path) "Review" else "Check source",
+    if (class_current_path) "Pass" else "Check source",
+    if (unassigned) "Review" else "Pass", if (disagree) "Review" else "Pass", "Documented",
+    if (is.na(mw_conflicts)) "Check source" else if (mw_conflicts) "Review" else "Pass"),
+  detail = c(if (reg_old_path) "Regression source still reads data_processed; EDA reads final_data." else "Review the current regression input expression.",
+    if (class_current_path) "Classification reads ../final_data from pipeline_new." else "Review the current classification input expression.",
     sprintf("%s eligible classification cells have no saved training/test earthquake ID.", unassigned),
     sprintf("%s classification-eligible earthquakes differ between the saved split and seed-123 regression reconstruction.", disagree),
-    sprintf("Regression: %s cells. Classification before saved-ID selection: %s cells.", nrow(regression), nrow(classification)))),
+    sprintf("Regression: %s cells. Classification before saved-ID selection: %s cells. Identical eligible event-cell keys: %s; partitions are audited separately.", nrow(regression), nrow(classification), same_eligible),
+    if (is.na(mw_conflicts)) "Builder threshold changed; inspect its current magnitude rule." else
+      sprintf("Builder requires Mw > 3.5, but current final data contain %s rows at or below 3.5. EDA retains the supplied data and does not resolve this policy difference.", mw_conflicts))),
   "13_pipeline_audit")
 
 # Include source hashes and actual data dates; do not reuse old report counts/dates.
@@ -296,10 +321,11 @@ writeLines(c("# DATA309 EDA outputs", "", paste("Generated:", run_time), "",
   "", "## Current sample", "",
   sprintf("Final data: %s earthquake-cells across %s earthquakes, from %s to %s (UTC).",
     nrow(site), n_distinct(site$publicid), min(site$origintime), max(site$origintime)),
-  sprintf("Regression preparation retains %s complete earthquake-cells across %s earthquakes with at least four reports per cell.",
+  sprintf("Regression preparation retains %s earthquake-cells across %s earthquakes with at least four reports per cell, complete selected fields, positive Repi/Vs30 and MMI >=3.",
     nrow(regression), n_distinct(regression$publicid)),
-  sprintf("Classification preparation additionally requires MMI levels 3-8: %s eligible cells; %s are not covered by the saved IDs.", nrow(classification), unassigned),
-  "The two samples and partitions must not be described as identical. See 01_split_comparison.csv and 13_pipeline_audit.csv.",
+  sprintf("Classification requires complete selected fields, at least four reports and MMI levels 3-8: %s eligible cells; %s are not covered by the saved IDs.", nrow(classification), unassigned),
+  sprintf("Identical eligible event-cell keys before partitioning: %s. This does not establish identical train/test sets. See 01_split_comparison.csv and 13_pipeline_audit.csv.", same_eligible),
+  "The current final regression predicts raw MMI with linear Vs30; this EDA describes observations and does not reproduce model performance.",
   "", "## Reading the results", "",
   "00: sample flow and catalogue coverage. 01: saved-ID coverage and reconstructed split comparison.",
   "02-06: MMI, missingness, threshold retention, event coverage and distributions.",
@@ -313,13 +339,16 @@ writeLines(c("# DATA309 EDA outputs", "", paste("Generated:", run_time), "",
   "", "## Inputs and reproducibility", "",
   "input_manifest.csv identifies input and source-code hashes. output_manifest.csv identifies this run's products.",
   "No models are fitted, no data are downloaded, and no input datasets or saved IDs are overwritten.",
-  "Both model notebooks still refer to an old data_processed directory; their execution is outside this EDA update.",
+  "13_pipeline_audit.csv checks model input references, saved partitions and the upstream Mw threshold against this snapshot.",
   "See ../DATA309_EDA.md for commands, dependencies, migration and limitations."), file.path(stage, "README.md"))
 share34 <- 100 * mean(regression$reported_mmi %in% c(3, 4))
 writeLines(c("# Data-derived EDA text", "", "Regenerate this text when inputs change; check the sample used by your models before copying it into the report.", "",
-  sprintf("The final dataset contains %s earthquake-cell observations. Requiring at least four reports per cell and complete fields retains %s observations from %s earthquakes for the regression preparation rules.", nrow(site), nrow(regression), n_distinct(regression$publicid)),
+  sprintf("The final dataset contains %s earthquake-cell observations. Requiring at least four reports per cell, complete selected fields, positive epicentral distance and Vs30, and MMI >=3 retains %s observations from %s earthquakes for regression.", nrow(site), nrow(regression), n_distinct(regression$publicid)),
   sprintf("In this sample, MMI 3 and 4 together account for %.2f%% of observations, and %s observations have MMI 5 or higher. These are cell-level medians, not individual report ratings.", share34, sum(regression$reported_mmi >= 5)),
-  sprintf("The final data contain %s missing Vs30 values. Classification uses a distinct MMI 3-8 sample and saved event partitions; %s otherwise eligible observations are outside those partitions.", sum(is.na(site$Vs30_m_s)), unassigned),
+  sprintf("The final data contain %s missing Vs30 values. Classification uses MMI 3-8 and saved event partitions; %s otherwise eligible observations are outside those partitions. Identical eligible event-cell keys before splitting: %s.", sum(is.na(site$Vs30_m_s)), unassigned, same_eligible),
+  sprintf("The reconstructed regression split contains %s training observations across %s earthquakes and %s test observations across %s earthquakes. These partitions differ from the saved classification partitions.",
+    sum(regression$publicid %in% reg_train), length(reg_train),
+    sum(!regression$publicid %in% reg_train), length(setdiff(reg_ids, reg_train))),
   "The report-count retention analysis describes the sample-size trade-off; it does not establish that four reports is an optimal precision threshold.",
   "Individual MMI frequencies are not included in the current inputs, so within-cell dispersion and comparisons of mean, median and mode cannot be estimated from these files."), file.path(stage, "report_text.md"))
 files <- list.files(stage, all.files = TRUE, no.. = TRUE)

@@ -7,7 +7,9 @@ out <- if (length(args)) args[1] else file.path(pipeline, "eda_outputs")
 data_dir <- if (length(args) >= 2) args[2] else file.path(dirname(pipeline), "final_data")
 read <- function(name) read.csv(file.path(out, paste0(name, ".csv")), stringsAsFactors = FALSE)
 site <- as.data.frame(arrow::read_parquet(file.path(data_dir, "NZ_FR_IAR_final_dataset.parquet")))
-reg <- site[which(site$report_count >= 4 & complete.cases(site)), ]
+reg_fields <- c("publicid", "cell_id", "reported_mmi", "Mw", "event_depth_km", "Repi_km", "Vs30_m_s")
+reg <- site[which(site$report_count >= 4 & complete.cases(site[reg_fields]) &
+  site$Repi_km > 0 & site$Vs30_m_s > 0 & site$reported_mmi >= 3), ]
 fields <- c("publicid", "Mw", "Vs30_m_s", "Rhypo_km", "reported_mmi", "report_count",
   "event_depth_km", "Repi_km", "report_longitude", "report_latitude")
 cls <- site[which(site$report_count >= 4 & site$reported_mmi >= 3 & complete.cases(site[fields])), ]
@@ -37,6 +39,15 @@ audit <- read("01_earthquake_split_audit")
 set.seed(123)
 ids <- unique(reg$publicid)
 rt <- sample(ids, floor(.8 * length(ids)))
+stopifnot(overview$earthquake_cells[overview$stage == "regression_train"] == sum(reg$publicid %in% rt),
+  overview$earthquake_cells[overview$stage == "regression_test"] == sum(!reg$publicid %in% rt))
+reg_counts <- read("01_regression_split_mmi_counts")
+for (split in c("Train", "Test")) {
+  selected <- if (split == "Train") reg$publicid %in% rt else !reg$publicid %in% rt
+  counts <- table(reg$reported_mmi[selected])
+  reported <- reg_counts[reg_counts$split == split, ]
+  stopifnot(all(as.numeric(counts) == reported$earthquake_cells[match(names(counts), reported$reported_mmi)]))
+}
 stopifnot(setequal(audit$publicid[audit$reconstructed_regression_split == "Train"], rt),
   setequal(audit$publicid[audit$saved_classification_split == "Test"], test))
 event_counts <- table(reg$publicid)
@@ -47,7 +58,7 @@ for (id in head(names(sort(event_counts, decreasing = TRUE)), 4)) {
 }
 manifest <- read("output_manifest")
 inputs <- read("input_manifest")
-input_paths <- ifelse(grepl("^/", inputs$file), inputs$file, file.path(dirname(pipeline), inputs$file))
+input_paths <- ifelse(grepl("^/|^[A-Za-z]:", inputs$file), inputs$file, file.path(dirname(pipeline), inputs$file))
 stopifnot(identical(unname(tools::md5sum(input_paths)), inputs$md5))
 paths <- file.path(out, manifest$file)
 stopifnot(all(file.exists(paths)), all(file.info(paths)$size == manifest$bytes),

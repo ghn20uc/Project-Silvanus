@@ -18,6 +18,13 @@ Install `sf` to also generate the geographic coverage map from the existing
 `pipeline_new/nzmap/regional-council-2025-clipped.gpkg`. No network requests are
 made by EDA. The script can be invoked by absolute path from any working directory.
 No `setwd()`, IDE project state, `here()` configuration or preloaded workspace is needed.
+Use the Rscript entry point rather than selecting all lines and clicking Run.
+In the Windows RStudio Console, with the repository as the working directory:
+
+```r
+system2(file.path(R.home("bin"), "Rscript.exe"),
+        args = shQuote("pipeline_new/DATA309_EDA.R"))
+```
 
 ```sh
 Rscript /path/to/Project-Silvanus/pipeline_new/DATA309_EDA.R \
@@ -81,9 +88,11 @@ UTC; the observed date range comes from `origintime`, not filesystem timestamps.
 - **Final dataset:** all event-cell rows in the enriched Parquet file, including
   missing Vs30 values. A row is an earthquake-cell pair, not an individual person.
 - **Regression eligible:** at least four reports per cell, at least four per event,
-  then complete cases across the input fields. The event threshold is redundant
-  after this cell threshold. No MMI 3-8 restriction is imposed by the current
-  regression notebook, so low-MMI rows must remain visible.
+  then complete `publicid`, `cell_id`, `reported_mmi`, `Mw`, `event_depth_km`,
+  `Repi_km` and `Vs30_m_s`; require positive `Repi_km`/`Vs30_m_s` and MMI >=3.
+  The event threshold is redundant after this cell threshold. This matches the
+  updated regression notebook; lower MMI values remain in the full-data overview.
+  Missingness in fields outside this list is not an extra regression exclusion.
 - **Classification eligible:** complete cases in the notebook's selected fields,
   at least four reports, MMI >=3 and representable by its ordered levels 3-8.
   Unexpected fractional/out-of-range values cause an error; they are not rounded.
@@ -92,6 +101,13 @@ UTC; the observed date range comes from `origintime`, not filesystem timestamps.
 - **Reconstructed regression split:** R's seed 123, floor(0.8 * number of eligible
   events), preserving event order in the input. This audits current preparation
   logic; it does not establish which split produced previously committed models.
+  The overview and `01_regression_split_mmi_counts.csv` report this split separately
+  from the classification counts. Eligible event-cell keys currently match across
+  the two methods, but their actual training/test partitions do not.
+
+The current final regression uses raw MMI and untransformed Vs30, with both linear
+and log10 epicentral distance. EDA charts describe observed MMI; they do not apply
+the earlier model's Box-Cox transformation or claim current prediction accuracy.
 
 The EDA uses the full data for descriptive coverage and associations. It is not
 independent validation of a trained model, and full-sample trends should not be
@@ -117,16 +133,23 @@ separately validated individual-report or per-MMI-frequency dataset.
 
 ## Model integration checks
 
-The model notebooks currently reference the old `data_processed` location while
-this repository stores current inputs under `final_data`. EDA reads the canonical
-current location directly. It audits saved partitions, records input/source hashes,
+The regression notebook still references `data_processed`; classification now
+reads `../final_data` from `pipeline_new`. EDA reads `final_data` directly.
+It audits saved partitions and the upstream magnitude boundary, records input/source hashes,
 and reports discrepancies; it does not rewrite or execute the model notebooks.
 Sample and split counts describe what their preparation rules imply for **current**
 data, not previously fitted results. Review `13_pipeline_audit.csv` before claiming
 identical training/test samples or reusing old model metrics with new data.
 
 When model preparation rules change, review this script's matching rules and tests.
-Basic threshold, factor-level and seed guards fail on incompatible edits instead
-of silently continuing with those old constants. Schema, event-cell uniqueness,
+The parsed `data_sd` preparation expression must match the approved expression
+in `eda_helpers.R`; changing the selected fields, MMI cutoff or filter order fails
+before output publication. Threshold, factor-level and seed guards also apply.
+Schema, event-cell uniqueness,
 finite values, event attributes, enrichment consistency and split overlap are
 validated before outputs are published.
+
+The upstream builder currently requires Mw >3.5 while the supplied data include
+Mw=3.5. This is recorded as a review item; EDA does not remove these observations
+or silently decide a new threshold. Integration questions for the team are listed
+in [DATA309_EDA_integration.md](DATA309_EDA_integration.md).
