@@ -1,0 +1,5 @@
+analysis,status,reason
+"Within-cell mean, mode, spread and skewness",Unavailable,"Current files contain only cell median and report count, not individual MMI frequencies."
+Median precision or mean/median comparison,Unavailable,Report count alone does not identify within-cell variability or sampling uncertainty.
+Fault-style comparisons,Unavailable,The current final dataset has no fault_style field.
+Geographic coverage,Generated,Generated from the repository's local regional-council outline

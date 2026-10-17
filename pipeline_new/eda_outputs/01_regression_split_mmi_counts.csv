@@ -1,0 +1,13 @@
+split,reported_mmi,earthquake_cells
+Test,3,8956
+Test,4,10433
+Test,5,1490
+Test,6,26
+Test,7,2
+Test,8,2
+Train,3,36291
+Train,4,44043
+Train,5,5235
+Train,6,374
+Train,7,14
+Train,8,11

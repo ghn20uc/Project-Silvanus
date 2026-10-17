@@ -1,0 +1,7 @@
+saved_classification_split,reconstructed_regression_split,earthquakes
+Test,Test,57
+Test,Train,134
+Train,Test,134
+Train,Train,626
+Unassigned,Test,15
+Unassigned,Train,63

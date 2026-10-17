@@ -1,0 +1,7 @@
+check,status,detail
+regression_input_location,Review,Regression source still reads data_processed; EDA reads final_data.
+classification_input_location,Pass,Classification reads ../final_data from pipeline_new.
+saved_split_coverage,Review,4445 eligible classification cells have no saved training/test earthquake ID.
+split_agreement,Review,346 classification-eligible earthquakes differ between the saved split and seed-123 regression reconstruction.
+sample_definition,Documented,Regression: 106877 cells. Classification before saved-ID selection: 106877 cells. Identical eligible event-cell keys: TRUE; partitions are audited separately.
+upstream_magnitude_filter,Review,"Builder requires Mw > 3.5, but current final data contain 11420 rows at or below 3.5. EDA retains the supplied data and does not resolve this policy difference."
