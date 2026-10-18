@@ -32,7 +32,7 @@ library(lmtest)
 # LOAD DATA
 data <- read_parquet(
   here(
-    "data_processed",
+    "final_data",
     "NZ_FR_IAR_final_dataset.parquet"
   )
 )
@@ -204,6 +204,18 @@ cat(
   "\n"
 )
 
+# Create data_final folder if it doesn't exist
+dir.create(
+  here("final_data"),
+  showWarnings = FALSE,
+  recursive = TRUE
+)
+
+# Save training earthquake IDs
+saveRDS(
+  train_ids,
+  here("final_data", "train_earthquake_ids.rds")
+)
 
 # BOX-COX FUNCTIONS
 boxcox_transform <- function(

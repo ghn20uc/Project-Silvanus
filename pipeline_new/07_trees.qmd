@@ -63,6 +63,7 @@ earthquake_data_trim <- earthquake_data_trim[earthquake_data_trim$reported_mmi >
 
 table(earthquake_data_trim$reported_mmi)
 ```
+
 ```{r}
 nrow(earthquake_data_trim)  
 ```
@@ -131,8 +132,8 @@ earthquake_data_trim <- earthquake_data_trim |>
   filter(report_count >= 4)
 
 # Load earthquake IDs from linear regression
-train_ids <- readRDS("data_raw/train_earthquake_ids.rds")
-test_ids <- readRDS("data_raw/test_earthquake_ids.rds")
+train_ids <- readRDS("final_data/train_earthquake_ids.rds")
+test_ids <- readRDS("final_data/test_earthquake_ids.rds")
 
 # Split using the same earthquakes as linear regression
 train <- earthquake_data_trim |>
@@ -152,9 +153,11 @@ cat("Test observations:", nrow(test), "\n")
 train$publicid <- NULL
 test$publicid <- NULL
 ```
+
 ```{r}
 table(earthquake_data_trim$reported_mmi)
 ```
+
 ```{r}
 table(train$reported_mmi)
 ```
@@ -162,6 +165,7 @@ table(train$reported_mmi)
 ```{r}
 table(test$reported_mmi)
 ```
+
 ## Function for models evaluation
 
 ```{r}
