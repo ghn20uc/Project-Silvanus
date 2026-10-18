@@ -1,0 +1,2147 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1. Split earthquakes into train/test
+2. calculate best_lambda using only train_data
+3. create the Box–Cox response
+4. fit models
+5. predict test data
+6. inverse Box–Cox predictions
+7. calculate RMSE in MMI units.
+
+
+```{r}
+# LIBRARIES
+library(arrow)
+library(MASS)
+library(tidyverse)
+library(sf)
+library(lme4)
+library(here)
+library(ggspatial)
+library(ggnewscale)
+library(dplyr)
+library(ggplot2)
+library(sandwich)
+library(lmtest)
+```
+
+```{r}
+# LOAD DATA
+data <- read_parquet(
+  here(
+    "data_processed",
+    "NZ_FR_IAR_final_dataset.parquet"
+  )
+)
+
+# CHECK DATA
+expected_columns <- c(
+  "publicid",
+  "cell_id",
+  "origintime",
+  "event_longitude",
+  "event_latitude",
+  "event_depth_km",
+  "report_longitude",
+  "report_latitude",
+  "reported_mmi",
+  "report_count",
+  "Mw",
+  "Repi_km",
+  "Rhypo_km",
+  "Vs30_m_s"
+)
+
+# Check all expected columns are present
+stopifnot(
+  all(expected_columns %in% names(data))
+)
+
+# Check earthquake-cell combinations are unique
+stopifnot(
+  nrow(data) ==
+    nrow(
+      distinct(
+        data,
+        publicid,
+        cell_id
+      )
+    )
+)
+
+# Check important values are usable
+stopifnot(
+  all(data$report_count >= 0, na.rm = TRUE),
+  all(data$Rhypo_km >= 0, na.rm = TRUE),
+  all(data$Repi_km >= 0, na.rm = TRUE),
+  all(data$event_depth_km >= 0, na.rm = TRUE),
+  all(data$reported_mmi > 0, na.rm = TRUE)
+)
+
+# Confirm existing earthquake selection rules
+stopifnot(
+  all(
+    data$origintime >=
+      as.POSIXct(
+        "2016-09-01",
+        tz = "UTC"
+      )
+  ),
+  all(
+    data$Mw >= 3.5,
+    na.rm = TRUE
+  )
+)
+
+# Check earthquake-level attributes are consistent
+event_check <- data |>
+  group_by(publicid) |>
+  summarise(
+    n_origintime = n_distinct(origintime),
+    n_event_longitude = n_distinct(event_longitude),
+    n_event_latitude = n_distinct(event_latitude),
+    n_event_depth = n_distinct(event_depth_km),
+    n_Mw = n_distinct(Mw),
+    .groups = "drop"
+  )
+
+stopifnot(
+  all(event_check$n_origintime == 1),
+  all(event_check$n_event_longitude == 1),
+  all(event_check$n_event_latitude == 1),
+  all(event_check$n_event_depth == 1),
+  all(event_check$n_Mw == 1)
+)
+
+# REPORT COUNT FILTERING
+minimum_reports_per_cell <- 4
+
+# EARTHQUAKE THRESHOLDS
+minimum_reports_per_earthquake <- 4
+
+
+data_sd <- data |>
+  filter(report_count >= minimum_reports_per_cell) |>
+  group_by(publicid) |>
+  mutate(
+    total_reports = sum(report_count, na.rm = TRUE)
+  ) |>
+  filter(total_reports >= minimum_reports_per_earthquake) |>
+  ungroup() |>
+  filter(
+    if_all(
+      c(
+        publicid,
+        cell_id,
+        reported_mmi,
+        Mw,
+        event_depth_km,
+        Repi_km,
+        Vs30_m_s
+      ),
+      ~ !is.na(.x)
+    ),
+    Repi_km > 0,
+    Vs30_m_s > 0,
+    reported_mmi >= 3
+  )
+
+# CHECK LOG TRANSFORMATIONS
+stopifnot(
+  all(
+    data_sd$Repi_km > 0,
+    na.rm = TRUE
+  ),
+  all(
+    data_sd$Vs30_m_s > 0,
+    na.rm = TRUE
+  )
+)
+
+# 80 / 20 TRAIN-TEST SPLIT BY EARTHQUAKE
+set.seed(123)
+
+
+# Get unique earthquakes
+earthquake_ids <- unique(
+  data_sd$publicid
+)
+
+
+# Randomly select 80% of earthquakes for training
+train_ids <- sample(
+  earthquake_ids,
+  size = floor(
+    0.8 * length(earthquake_ids)
+  )
+)
+
+# Split data by earthquake
+train_data <- data_sd |>
+  filter(
+    publicid %in% train_ids
+  )
+
+
+test_data <- data_sd |>
+  filter(
+    !publicid %in% train_ids
+  )
+
+# Check split
+cat(
+  "Training earthquakes:",
+  n_distinct(train_data$publicid),
+  "\n"
+)
+
+cat(
+  "Testing earthquakes:",
+  n_distinct(test_data$publicid),
+  "\n"
+)
+
+
+# BOX-COX FUNCTIONS
+boxcox_transform <- function(
+  y,
+  lambda,
+  tol = 1e-8
+) {
+
+  if (any(y <= 0, na.rm = TRUE)) {
+    stop(
+      "Box-Cox transformation requires positive response values."
+    )
+  }
+
+  if (abs(lambda) < tol) {
+
+    log(y)
+
+  } else {
+
+    (y^lambda - 1) / lambda
+
+  }
+}
+
+
+inverse_boxcox <- function(
+  z,
+  lambda,
+  tol = 1e-8
+) {
+
+  if (abs(lambda) < tol) {
+    return(
+      exp(z)
+    )
+  }
+
+  inside <- 1 + lambda * z
+
+  result <- rep(
+    NA_real_,
+    length(z)
+  )
+
+  valid <- is.finite(inside) & inside > 0
+
+  result[valid] <-
+    inside[valid]^(1 / lambda)
+
+  if (any(!valid)) {
+
+    warning(
+      "Some Box-Cox predictions could not be back-transformed."
+    )
+
+  }
+
+  return(result)
+}
+
+# CREATE 5 CROSS-VALIDATION FOLDS
+set.seed(123)
+
+k <- 5
+
+
+# Get unique TRAINING earthquakes
+cv_earthquakes <- unique(
+  train_data$publicid
+)
+
+
+# Randomly assign whole earthquakes to folds
+fold_assignment <- tibble(
+  publicid = sample(
+    cv_earthquakes
+  )
+) |>
+  mutate(
+    fold = rep(
+      1:k,
+      length.out = n()
+    )
+  )
+
+
+# Add fold number to each cell
+train_cv <- train_data |>
+  left_join(
+    fold_assignment,
+    by = "publicid"
+  )
+
+
+# Check number of earthquakes in each fold
+fold_assignment |>
+  count(fold)
+
+# LINEAR MODEL CROSS-VALIDATION
+cv_lr_results <- tibble()
+
+
+for (i in 1:k) {
+
+  cat(
+    "Linear model CV fold",
+    i,
+    "of",
+    k,
+    "\n"
+  )
+
+  # Training and validation data
+  fold_train <- train_cv |>
+    filter(
+      fold != i
+    )
+
+
+  fold_validation <- train_cv |>
+    filter(
+      fold == i
+    )
+
+  # # Find Box-Cox lambda using ONLY fold training data
+  # bc_fit <- lm(
+  #   reported_mmi ~
+  #     event_depth_km +
+  #     Mw +
+  #     Repi_km +
+  #     Vs30_m_s,
+  #   data = fold_train
+  # )
+  # 
+  # 
+  # bc <- MASS::boxcox(
+  #   bc_fit,
+  #   plotit = FALSE
+  # )
+  # 
+  # 
+  # fold_lambda <- bc$x[
+  #   which.max(bc$y)
+  # ]
+
+  # # Transform response
+  # fold_train <- fold_train |>
+  #   mutate(
+  #     reported_mmi_bc =
+  #       boxcox_transform(
+  #         reported_mmi,
+  #         fold_lambda
+  #       )
+  #   )
+
+  # Model 1
+  # Linear Repi + linear Vs30
+  model_1 <- lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      Vs30_m_s,
+    data = fold_train
+  )
+
+  # Model 2
+  # Log Repi + linear Vs30
+  model_2 <- lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      log10(Repi_km) +
+      Vs30_m_s,
+    data = fold_train
+  )
+
+  # Model 3
+  # Linear Repi + log Vs30
+  model_3 <- lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      log10(Vs30_m_s),
+    data = fold_train
+  )
+
+  # Model 4
+  # Log Repi + log Vs30
+  model_4 <- lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      log10(Repi_km) +
+      log10(Vs30_m_s),
+    data = fold_train
+  )
+
+  # Model 5
+  # Linear + log Repi + linear Vs30
+  model_5 <- lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      log10(Repi_km) +
+      Vs30_m_s,
+    data = fold_train
+  )
+
+  # Model 6
+  # Linear + log Repi + log Vs30
+  model_6 <- lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      log10(Repi_km) +
+      log10(Vs30_m_s),
+    data = fold_train
+  )
+
+
+  models <- list(
+
+    "Linear Repi + linear Vs30" =
+      model_1,
+
+    "Log10 Repi + linear Vs30" =
+      model_2,
+
+    "Linear Repi + log10 Vs30" =
+      model_3,
+
+    "Log10 Repi + log10 Vs30" =
+      model_4,
+
+    "Linear + log10 Repi + linear Vs30" =
+      model_5,
+
+    "Linear + log10 Repi + log10 Vs30" =
+      model_6
+
+  )
+
+# Predict validation earthquakes
+for (model_name in names(models)) {
+
+  pred_mmi <- predict(
+    models[[model_name]],
+    newdata = fold_validation
+  )
+  
+    # Calculate RMSE
+    rmse <- sqrt(
+      mean(
+        (
+          fold_validation$reported_mmi -
+            pred_mmi
+        )^2,
+        na.rm = TRUE
+      )
+    )
+
+
+  cv_lr_results <- bind_rows(
+    cv_lr_results,
+    tibble(
+      fold = i,
+      model = model_name,
+      RMSE = rmse
+      )
+    )
+
+  }
+
+}
+
+# LINEAR MODEL CV RESULTS
+cv_lr_summary <- cv_lr_results |>
+  group_by(model) |>
+  summarise(
+    mean_RMSE = mean(RMSE),
+    sd_RMSE = sd(RMSE),
+    .groups = "drop"
+  ) |>
+  arrange(mean_RMSE)
+
+
+print(
+  cv_lr_results
+)
+
+print(
+  cv_lr_summary
+)
+
+# MIXED MODEL CROSS-VALIDATION
+cv_mixed_results <- tibble()
+
+
+for (i in 1:k) {
+
+  cat(
+    "Mixed model CV fold",
+    i,
+    "of",
+    k,
+    "\n"
+  )
+
+  # Training and validation data
+  fold_train <- train_cv |>
+    filter(
+      fold != i
+    )
+
+
+  fold_validation <- train_cv |>
+    filter(
+      fold == i
+    )
+
+  # Model 1
+  # Linear Repi + linear Vs30
+  mixed_1 <- lmer(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      Vs30_m_s +
+      (1 + Repi_km | publicid),
+    data = fold_train,
+    REML = FALSE
+  )
+
+  # Model 2
+  # Log Repi + linear Vs30
+  mixed_2 <- lmer(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      log10(Repi_km) +
+      Vs30_m_s +
+      (1 + log10(Repi_km) | publicid),
+    data = fold_train,
+    REML = FALSE
+  )
+
+  # Model 3
+  # Linear + log Repi + log Vs30
+  mixed_3 <- lmer(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      log10(Repi_km) +
+      log10(Vs30_m_s) +
+      (1 + log10(Repi_km) | publicid),
+    data = fold_train,
+    REML = FALSE
+  )
+
+
+  mixed_models <- list(
+
+    "Linear Repi + linear Vs30" =
+      mixed_1,
+
+    "Log10 Repi + linear Vs30" =
+      mixed_2,
+
+    "Linear + log10 Repi + log10 Vs30" =
+      mixed_3
+
+  )
+
+  # Predict unseen earthquakes
+  for (model_name in names(mixed_models)) {
+
+    pred <- predict(
+      mixed_models[[model_name]],
+      newdata = fold_validation,
+      re.form = NA,
+      allow.new.levels = TRUE
+    )
+
+
+    # RMSE
+    rmse <- sqrt(
+      mean(
+        (
+          fold_validation$reported_mmi -
+            pred
+        )^2,
+        na.rm = TRUE
+      )
+    )
+
+
+    cv_mixed_results <- bind_rows(
+      cv_mixed_results,
+      tibble(
+        fold = i,
+        model = model_name,
+        RMSE = rmse
+      )
+    )
+
+  }
+
+}
+
+# MIXED MODEL CV RESULTS
+cv_mixed_summary <- cv_mixed_results |>
+  group_by(model) |>
+  summarise(
+    mean_RMSE = mean(RMSE),
+    sd_RMSE = sd(RMSE),
+    .groups = "drop"
+  ) |>
+  arrange(mean_RMSE)
+
+
+print(
+  cv_mixed_results
+)
+
+print(
+  cv_mixed_summary
+)
+
+
+# RESPONSE TRANSFORMATION CROSS-VALIDATION
+
+# Compare:
+#   1. Raw MMI
+#   2. Log MMI
+#   3. Box-Cox MMI
+
+# Predictor structure is kept the same.
+cv_transform_results <- tibble()
+
+
+for (i in 1:k) {
+
+  cat(
+    "Transformation CV fold",
+    i,
+    "of",
+    k,
+    "\n"
+  )
+
+  # Training and validation data
+  fold_train <- train_cv |>
+    filter(
+      fold != i
+    )
+
+
+  fold_validation <- train_cv |>
+    filter(
+      fold == i
+    )
+
+  # Find Box-Cox lambda from fold training data
+  bc_fit <- lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      log10(Repi_km) +
+      Vs30_m_s,
+    data = fold_train
+  )
+
+
+  bc <- MASS::boxcox(
+    bc_fit,
+    plotit = FALSE
+  )
+
+
+  fold_lambda <- bc$x[
+    which.max(bc$y)
+  ]
+
+
+  fold_train <- fold_train |>
+    mutate(
+      reported_mmi_bc =
+        boxcox_transform(
+          reported_mmi,
+          fold_lambda
+        )
+    )
+
+  # Raw MMI model
+  model_raw <- lm(
+  reported_mmi ~
+    event_depth_km +
+    Mw +
+    Repi_km +
+    log10(Repi_km) +
+    Vs30_m_s,
+  data = fold_train
+)
+
+  # Log MMI model
+  model_log <- lm(
+    log(reported_mmi)  ~
+    event_depth_km +
+    Mw +
+    Repi_km +
+    log10(Repi_km) +
+    Vs30_m_s,
+  data = fold_train
+  )
+
+  # Box-Cox MMI model
+  model_bc <- lm(
+    reported_mmi_bc ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      log10(Repi_km) +
+      Vs30_m_s,
+    data = fold_train
+  )
+
+  # Raw predictions
+  pred_raw <- predict(
+    model_raw,
+    newdata = fold_validation
+  )
+
+  # Log predictions
+  # Back-transform with exp()
+  pred_log <- exp(
+    predict(
+      model_log,
+      newdata = fold_validation
+    )
+  )
+
+  # Box-Cox predictions
+  pred_bc_transformed <- predict(
+    model_bc,
+    newdata = fold_validation
+  )
+
+
+  pred_bc <- inverse_boxcox(
+    pred_bc_transformed,
+    fold_lambda
+  )
+
+  # RMSE
+  rmse_raw <- sqrt(
+    mean(
+      (
+        fold_validation$reported_mmi -
+          pred_raw
+      )^2,
+      na.rm = TRUE
+    )
+  )
+
+
+  rmse_log <- sqrt(
+    mean(
+      (
+        fold_validation$reported_mmi -
+          pred_log
+      )^2,
+      na.rm = TRUE
+    )
+  )
+
+
+  rmse_bc <- sqrt(
+    mean(
+      (
+        fold_validation$reported_mmi -
+          pred_bc
+      )^2,
+      na.rm = TRUE
+    )
+  )
+
+
+  # Save results
+  cv_transform_results <- bind_rows(
+    cv_transform_results,
+
+    tibble(
+      fold = i,
+      transformation = c(
+        "Raw MMI",
+        "Log MMI",
+        "Box-Cox MMI"
+      ),
+      lambda = c(
+        NA,
+        NA,
+        fold_lambda
+      ),
+      RMSE = c(
+        rmse_raw,
+        rmse_log,
+        rmse_bc
+      )
+    )
+  )
+
+}
+
+# TRANSFORMATION CV RESULTS
+cv_transform_summary <-
+  cv_transform_results |>
+  group_by(transformation) |>
+  summarise(
+    mean_RMSE = mean(RMSE),
+    sd_RMSE = sd(RMSE),
+    .groups = "drop"
+  ) |>
+  arrange(mean_RMSE)
+
+
+print(
+  cv_transform_results
+)
+
+print(
+  cv_transform_summary
+)
+
+# FINAL BOX-COX LAMBDA
+
+# Now that CV is finished, calculate lambda using ALL
+# training data.
+bc_final <- MASS::boxcox(
+  lm(
+    reported_mmi ~
+      event_depth_km +
+      Mw +
+      Repi_km +
+      log10(Repi_km) +
+      log10(Vs30_m_s),
+    data = train_data
+  ),
+  plotit = FALSE
+)
+
+
+best_lambda_final <- bc_final$x[
+  which.max(bc_final$y)
+]
+
+
+cat(
+  "Final Box-Cox lambda:",
+  best_lambda_final,
+  "\n"
+)
+
+
+# Transform training response
+train_data <- train_data |>
+  mutate(
+    reported_mmi_bc_final =
+      boxcox_transform(
+        reported_mmi,
+        best_lambda_final
+      )
+  )
+
+# FINAL LINEAR MODEL
+
+# Uses Model 5: linear and log10 epicentral distance, with linear Vs30.
+final_lm <- lm(
+  reported_mmi ~
+    event_depth_km +
+    Mw +
+    Repi_km +
+    log10(Repi_km) +
+   Vs30_m_s,
+  data = train_data
+)
+
+
+summary(
+  final_lm
+)
+
+# COEFFICIENT TABLE WITH CLUSTER-ROBUST STANDARD ERRORS
+
+# 1. Calculate cluster-robust covariance matrix
+# Group observations by earthquake (publicid)
+cluster_vcov <- vcovCL(
+  final_lm,
+  cluster = train_data$publicid,
+  type = "HC1"
+)
+
+# 2. Extract coefficient estimates and robust standard errors
+coefficient_results <- coeftest(
+  final_lm,
+  vcov. = cluster_vcov,
+  df = Inf
+)
+
+# 3. Calculate 95% confidence intervals
+coefficient_table <- data.frame(
+  Predictor = rownames(coefficient_results),
+  Estimate = coefficient_results[, 1],
+  Robust_SE = coefficient_results[, 2],
+  CI_lower = coefficient_results[, 1] -
+    1.96 * coefficient_results[, 2],
+  CI_upper = coefficient_results[, 1] +
+    1.96 * coefficient_results[, 2],
+  p_value = coefficient_results[, 4]
+) |>
+  mutate(
+    across(
+      where(is.numeric),
+      ~ signif(.x, 4)
+    )
+  )
+
+# 4. Display results
+print(coefficient_table, row.names = FALSE)
+
+# FINAL MIXED MODEL
+
+# This currently uses:
+# log10(Repi) + linear Vs30 + random intercept/slope.
+final_mixed <- lmer(
+  reported_mmi ~
+    event_depth_km +
+    Mw +
+    log10(Repi_km) +
+    Vs30_m_s +
+    (1 + log10(Repi_km) | publicid),
+  data = train_data,
+  REML = FALSE
+)
+
+
+summary(
+  final_mixed
+)
+
+
+# Check whether mixed model is singular
+isSingular(
+  final_mixed
+)
+
+# FINAL TEST DATA EVALUATION
+
+# Linear model predicts directly in MMI units
+pred_lm <- predict(
+  final_lm,
+  newdata = test_data
+)
+
+pred_mixed <- predict(
+  final_mixed,
+  newdata = test_data,
+  re.form = NA,
+  allow.new.levels = TRUE
+)
+
+# Calculate RMSE
+rmse_lm <- sqrt(mean(
+  (test_data$reported_mmi - pred_lm)^2
+))
+
+rmse_mixed <- sqrt(mean(
+  (test_data$reported_mmi - pred_mixed)^2
+))
+
+# Compare models
+final_results <- tibble(
+  Model = c("Linear model", "Mixed-effects model"),
+  RMSE = c(rmse_lm, rmse_mixed)
+) |>
+  arrange(RMSE)
+
+print(final_results)
+```
+
+```{r}
+# PREDICTION PERFORMANCE BY MMI LEVEL
+
+# Predict MMI on the test dataset
+pred_mmi <- predict(
+  final_lm,
+  newdata = test_data
+)
+
+# Create evaluation dataset
+results <- test_data |>
+  mutate(
+    predicted_mmi = pred_mmi,
+    error = predicted_mmi - reported_mmi,
+    absolute_error = abs(error),
+    squared_error = error^2,
+
+    # Group observations by observed MMI category
+    mmi_category = floor(reported_mmi + 0.5)
+  ) |>
+  filter(
+    !is.na(predicted_mmi),
+    !is.na(reported_mmi)
+  )
+
+
+# 1. OVERALL PERFORMANCE
+overall_results <- results |>
+  summarise(
+    MAE = mean(absolute_error),
+    RMSE = sqrt(mean(squared_error))
+  )
+
+print(overall_results)
+
+
+# 2. PERFORMANCE BY OBSERVED MMI
+mmi_results <- results |>
+  group_by(mmi_category) |>
+  summarise(
+    n = n(),
+    MAE = mean(absolute_error),
+    RMSE = sqrt(mean(squared_error)),
+    mean_error = mean(error),
+    'underpredicted(%)' = mean(error < 0) * 100,
+    'overpredicted(%)' = mean(error > 0) * 100,
+    .groups = "drop"
+  ) |>
+  arrange(mmi_category)
+
+print(mmi_results)
+
+
+# 3. MACRO-AVERAGED MAE
+# Gives each observed MMI category equal weight
+macro_mae <- mmi_results |>
+  filter(mmi_category %in% 3:8) |>
+  summarise(
+    macro_MAE = mean(MAE)
+  )
+
+print(macro_mae)
+
+
+# 4. PLOT ERROR BY OBSERVED MMI
+ggplot(
+  mmi_results,
+  aes(
+    x = factor(mmi_category),
+    y = mean_error
+  )
+) +
+  geom_col(fill = "steelblue") +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Prediction Error by Observed MMI",
+    x = "Observed MMI",
+    y = "Mean Prediction Error (MMI)"
+  ) +
+  theme_minimal()
+```
+```{r}
+# TABLE 3: MMI DISTRIBUTION
+
+table3 <- bind_rows(
+  train_data |> mutate(dataset = "Training"),
+  test_data |> mutate(dataset = "Testing")
+) |>
+  count(reported_mmi, dataset) |>
+  pivot_wider(
+    names_from = dataset,
+    values_from = n,
+    values_fill = 0
+  ) |>
+  mutate(
+    Total = Training + Testing
+  ) |>
+  select(
+    MMI = reported_mmi,
+    Total,
+    Training,
+    Testing
+  ) |>
+  arrange(MMI)
+
+table3 <- bind_rows(
+  table3,
+  table3 |>
+    summarise(
+      MMI = NA_real_,
+      across(-MMI, sum)
+    )
+)
+
+print(table3, n = Inf)
+```
+
+```{r}
+# # DUAN'S SMEARING ESTIMATOR
+# # Compare original and bias-corrected Box-Cox predictions
+# 
+# # 1. GET TRAINING RESIDUALS
+# # Residuals are on the Box-Cox transformed scale
+# train_residuals <- residuals(final_lm)
+# 
+# 
+# # 2. PREDICT TEST DATA ON BOX-COX SCALE
+# pred_bc <- predict(
+#   final_lm,
+#   newdata = test_data
+# )
+# 
+# 
+# # 3. ORIGINAL PREDICTIONS
+# pred_original <- inverse_boxcox(
+#   pred_bc,
+#   best_lambda_final
+# )
+# 
+# 
+# # 4. DUAN'S SMEARING CORRECTION
+# # Average back-transformed predictions after adding
+# # residuals from the training data
+# smearing_predict <- function(
+#   pred_bc,
+#   residuals,
+#   lambda
+# ) {
+# 
+#   sapply(pred_bc, function(pred) {
+# 
+#     # Add training residuals to prediction
+#     adjusted_bc <- pred + residuals
+# 
+#     # Check which values can be back-transformed
+#     if (abs(lambda) < 1e-8) {
+# 
+#       valid <- is.finite(adjusted_bc)
+# 
+#     } else {
+# 
+#       valid <- is.finite(adjusted_bc) &
+#         (1 + lambda * adjusted_bc > 0)
+# 
+#     }
+# 
+#     # If no valid combinations remain
+#     if (!any(valid)) {
+#       return(NA_real_)
+#     }
+# 
+#     # Back-transform only valid combinations
+#     adjusted <- inverse_boxcox(
+#       adjusted_bc[valid],
+#       lambda
+#     )
+# 
+#     # Average back-transformed values
+#     mean(adjusted)
+# 
+#   })
+# }
+# 
+# # Calculate Duan's smearing-corrected predictions
+# pred_smeared <- smearing_predict(
+#   pred_bc,
+#   train_residuals,
+#   best_lambda_final
+# )
+# 
+# # 5. CREATE COMPARISON DATASET
+# smearing_results <- test_data |>
+#   mutate(
+#     predicted_original = pred_original,
+#     predicted_smeared = pred_smeared,
+#     mmi_category = floor(reported_mmi + 0.5)
+#   ) |>
+#   filter(
+#     is.finite(predicted_original),
+#     is.finite(predicted_smeared),
+#     !is.na(reported_mmi)
+#   )
+# 
+# 
+# # 6. OVERALL PERFORMANCE COMPARISON
+# smearing_overall <- smearing_results |>
+#   summarise(
+#     original_MAE = mean(
+#       abs(predicted_original - reported_mmi)
+#     ),
+# 
+#     smeared_MAE = mean(
+#       abs(predicted_smeared - reported_mmi)
+#     ),
+# 
+#     original_RMSE = sqrt(
+#       mean((predicted_original - reported_mmi)^2)
+#     ),
+# 
+#     smeared_RMSE = sqrt(
+#       mean((predicted_smeared - reported_mmi)^2)
+#     )
+#   )
+# 
+# print(smearing_overall)
+# 
+# 
+# # 7. PERFORMANCE BY OBSERVED MMI
+# smearing_by_mmi <- smearing_results |>
+#   group_by(mmi_category) |>
+#   summarise(
+#     n = n(),
+# 
+#     original_MAE = mean(
+#       abs(predicted_original - reported_mmi)
+#     ),
+# 
+#     smeared_MAE = mean(
+#       abs(predicted_smeared - reported_mmi)
+#     ),
+# 
+#     original_mean_error = mean(
+#       predicted_original - reported_mmi
+#     ),
+# 
+#     smeared_mean_error = mean(
+#       predicted_smeared - reported_mmi
+#     ),
+# 
+#     original_underpredicted = mean(
+#       predicted_original < reported_mmi
+#     ) * 100,
+# 
+#     smeared_underpredicted = mean(
+#       predicted_smeared < reported_mmi
+#     ) * 100,
+# 
+#     .groups = "drop"
+#   ) |>
+#   arrange(mmi_category)
+# 
+# print(smearing_by_mmi)
+# 
+# 
+# # 8. PLOT MEAN ERROR COMPARISON
+# smearing_plot_data <- smearing_by_mmi |>
+#   select(
+#     mmi_category,
+#     original_mean_error,
+#     smeared_mean_error
+#   ) |>
+#   tidyr::pivot_longer(
+#     cols = c(original_mean_error, smeared_mean_error),
+#     names_to = "method",
+#     values_to = "mean_error"
+#   )
+# 
+# ggplot(
+#   smearing_plot_data,
+#   aes(
+#     x = factor(mmi_category),
+#     y = mean_error,
+#     fill = method
+#   )
+# ) +
+#   geom_col(
+#     position = "dodge"
+#   ) +
+#   geom_hline(
+#     yintercept = 0,
+#     linetype = "dashed"
+#   ) +
+#   labs(
+#     title = "Effect of Duan's Smearing Correction",
+#     x = "Observed MMI",
+#     y = "Mean Prediction Error (MMI)",
+#     fill = "Prediction method"
+#   ) +
+#   theme_minimal()
+```
+
+
+```{r}
+summary(final_lm)
+
+
+test_r2 <- 1 -
+  sum((test_data$reported_mmi - pred_lm)^2) /
+  sum((test_data$reported_mmi -
+         mean(test_data$reported_mmi))^2)
+
+print(test_r2)
+```
+
+```{r}
+# BASELINE MODEL COMPARISON
+
+actual <- test_data$reported_mmi
+
+baseline_mean <- rep(
+  mean(train_data$reported_mmi),
+  length(actual)
+)
+
+baseline_four <- rep(4, length(actual))
+
+evaluate <- function(predicted) {
+  c(
+    MAE = mean(abs(predicted - actual)),
+    RMSE = sqrt(mean((predicted - actual)^2))
+  )
+}
+
+baseline_results <- rbind(
+  "Training mean baseline" = evaluate(baseline_mean),
+  "MMI 4 baseline" = evaluate(baseline_four),
+  "Linear regression" = evaluate(pred_lm)
+)
+
+print(baseline_results)
+```
+```{r}
+# Data actually used to fit the final model
+model_data <- model.frame(final_lm)
+
+# Full model
+full_model <- final_lm
+
+# Models excluding one predictor group at a time
+reduced_models <- list(
+  "Epicentral distance" = update(
+    full_model, . ~ . - Repi_km - log10(Repi_km)
+  ),
+  "Magnitude (Mw)" = update(
+    full_model, . ~ . - Mw
+  ),
+  "Depth" = update(
+    full_model, . ~ . - event_depth_km
+  ),
+  "Vs30" = update(
+    full_model, . ~ . - Vs30_m_s
+  )
+)
+
+# Calculate importance
+importance <- data.frame(
+  Variable = names(reduced_models),
+  Partial_R2 = sapply(reduced_models, function(m) {
+    (deviance(m) - deviance(full_model)) / deviance(m)
+  })
+)
+
+importance <- importance |>
+  dplyr::mutate(
+    Partial_R2 = round(Partial_R2, 4)
+  ) |>
+  dplyr::arrange(desc(Partial_R2))
+
+print(importance)
+```
+
+```{r}
+results |>
+  summarise(
+    mean_error = mean(error),
+    median_absolute_error = median(absolute_error),
+    error_sd = sd(error),
+    underpredicted_percent = mean(error < 0) * 100,
+    overpredicted_percent = mean(error > 0) * 100
+  )
+```
+
+# Mapping
+```{r}
+data_sd |>
+  filter(!is.na(reported_mmi)) |>
+  count(publicid, name = "reported_mmi_count") |>
+  arrange(desc(reported_mmi_count)) |>
+  slice_head(n = 10)
+
+```
+
+```{r}
+high_mmi_earthquakes <- data_sd |>
+  filter(reported_mmi %in% c(6, 7, 8)) |>
+  group_by(publicid) |>
+  summarise(
+    mmi_6 = sum(reported_mmi == 6),
+    mmi_7 = sum(reported_mmi == 7),
+    mmi_8 = sum(reported_mmi == 8),
+    total_6_7_8 = sum(reported_mmi %in% c(6, 7, 8)),
+    Mw = first(Mw),
+    event_depth_km = first(event_depth_km),
+    .groups = "drop"
+  ) |>
+  arrange(desc(total_6_7_8))
+
+high_mmi_earthquakes
+```
+
+```{r}
+unzip("statsnz-regional-council-2025-clipped-GPKG.zip", exdir = "nzmap")
+nzmap <- st_read("nzmap/regional-council-2025-clipped.gpkg")
+```
+
+```{r}
+# MAP OBSERVED AND PREDICTED MMI FOR ONE EARTHQUAKE
+
+# Choose earthquake
+earthquake_id <- "2023p122368"
+
+# GET EARTHQUAKE DATA
+eq_data <- data_sd |>
+  filter(publicid == earthquake_id)
+
+
+# Check earthquake exists
+stopifnot(
+  nrow(eq_data) > 0
+)
+
+# PREDICT MMI AT ACTUAL FELT RAPID LOCATIONS
+
+# Predict MMI directly at Felt RAPID locations
+eq_data$predicted_mmi <- predict(
+  final_lm,
+  newdata = eq_data
+)
+
+# CONVERT FELT RAPID LOCATIONS TO SPATIAL POINTS
+eq_sf <- eq_data |>
+  mutate(
+    observed_mmi_category = factor(
+      floor(reported_mmi + 0.5),
+      levels = 3:8
+    )
+  ) |>
+  st_as_sf(
+    coords = c(
+      "report_longitude",
+      "report_latitude"
+    ),
+    crs = 4326,
+    remove = FALSE
+  ) |>
+  st_transform(2193)
+
+# EARTHQUAKE EPICENTRE
+earthquake <- eq_data |>
+  slice(1) |>
+  st_as_sf(
+    coords = c(
+      "event_longitude",
+      "event_latitude"
+    ),
+    crs = 4326
+  ) |>
+  st_transform(2193)
+
+# NZ MAP
+nz_nztm <- nzmap |>
+  st_transform(2193)
+
+# Remove the Chatham Islands from the map
+# Keep only the mainland New Zealand region
+mainland_bbox <- st_bbox(
+  c(
+    xmin = 1000000,
+    ymin = 4700000,
+    xmax = 2100000,
+    ymax = 6300000
+  ),
+  crs = st_crs(2193)
+)
+
+nz_nztm <- st_crop(
+  nz_nztm,
+  mainland_bbox
+)
+
+# GET NEW ZEALAND MAP BOUNDARIES
+nz_bbox <- st_bbox(nz_nztm)
+
+# Add a margin around New Zealand
+x_margin <- (nz_bbox["xmax"] - nz_bbox["xmin"]) * 0.20
+y_margin <- (nz_bbox["ymax"] - nz_bbox["ymin"]) * 0.10
+
+# Get coordinates from NZ map
+nz_coords <- nz_nztm |>
+  st_geometry() |>
+  st_collection_extract("POLYGON") |>
+  st_coordinates()
+
+# Find southernmost point
+south_point_coords <- nz_coords[
+  which.min(nz_coords[, "Y"]),
+  c("X", "Y")
+]
+
+# Find southernmost point
+south_point_coords <- nz_coords[
+  which.min(nz_coords[, "Y"]),
+  c("X", "Y")
+]
+
+# Convert to spatial point
+south_point <- st_sfc(
+  st_point(south_point_coords),
+  crs = 2193
+)
+
+# Distance from earthquake epicentre to southern point
+max_radius_km <- as.numeric(
+  st_distance(
+    st_geometry(earthquake),
+    south_point
+  )
+) / 1000
+
+# EARTHQUAKE VALUES
+mw_value <- eq_data$Mw[1]
+
+depth <- eq_data$event_depth_km[1]
+
+
+# Hold Vs30 constant so predicted regions are circular
+vs30_value <- median(
+  eq_data$Vs30_m_s,
+  na.rm = TRUE
+)
+
+# GENERATE PREDICTIONS OVER EPICENTRAL DISTANCE
+
+max_distance <- max_radius_km
+
+prediction_data <- tibble(
+
+  Repi_km = seq(
+    from = 0.1,
+    to = max_distance,
+    by = 0.1
+  ),
+
+  event_depth_km = depth,
+
+  Mw = mw_value,
+
+  Vs30_m_s = vs30_value
+
+)
+
+# PREDICT MMI
+
+# Predict raw MMI
+prediction_data$predicted_mmi <- predict(
+  final_lm,
+  newdata = prediction_data
+)
+
+# PREDICTION RANGE
+minimum_predicted <- min(
+  prediction_data$predicted_mmi,
+  na.rm = TRUE
+)
+
+
+maximum_predicted <- max(
+  prediction_data$predicted_mmi,
+  na.rm = TRUE
+)
+
+
+print(
+  c(
+    minimum_predicted = minimum_predicted,
+    maximum_predicted = maximum_predicted
+  )
+)
+
+# MMI CATEGORY BOUNDARIES
+mmi_boundaries <- seq(
+  2.5,
+  7.5,
+  by = 1
+)
+
+mmi_boundaries <- mmi_boundaries[
+  mmi_boundaries <= maximum_predicted
+]
+
+# FIND DISTANCE OF EACH MMI BOUNDARY
+ring_distances <- map_dfr(
+  mmi_boundaries,
+  function(boundary) {
+
+    closest <- prediction_data |>
+      slice_min(
+        abs(predicted_mmi - boundary),
+        n = 1,
+        with_ties = FALSE
+      )
+
+    tibble(
+      boundary = boundary,
+      Repi_km = closest$Repi_km,
+      predicted_mmi = closest$predicted_mmi
+    )
+
+  }
+)
+
+
+print(ring_distances)
+
+# CREATE MMI RINGS
+rings <- ring_distances |>
+  mutate(
+    radius_km = pmin(
+      Repi_km,
+      max_radius_km
+    ),
+    mmi = ceiling(boundary)
+  ) |>
+  arrange(desc(radius_km))
+
+# CREATE CIRCLE GEOMETRY
+ring_geometry <- lapply(
+  rings$radius_km,
+  function(radius) {
+
+    st_buffer(
+      st_geometry(earthquake),
+      dist = radius * 1000
+    )[[1]]
+
+  }
+)
+
+
+rings_sf <- st_sf(
+
+  boundary = rings$boundary,
+
+  radius_km = rings$radius_km,
+
+  mmi = rings$mmi,
+
+  geometry = st_sfc(
+    ring_geometry,
+    crs = 2193
+  )
+
+)
+
+rings_sf$mmi <- factor(rings_sf$mmi, levels = 3:8)
+
+# MMI COLOURS
+mmi_colours <- c(
+  "3" = "#BFCCFF",
+  "4" = "#A0E6FF",
+  "5" = "#80F5A0",
+  "6" = "#FFFF00",
+  "7" = "#FFC800",
+  "8" = "#FF9100"
+)
+
+# CREATE MAP
+mmi_map <- ggplot() +
+
+  # NZ map
+  geom_sf(
+    data = nz_nztm,
+    fill = "grey95",
+    colour = "grey60",
+    linewidth = 0.25
+  ) +
+
+  # Predicted MMI regions
+  # Largest circles are plotted first
+  geom_sf(
+    data = rings_sf,
+    aes(
+      fill = mmi
+    ),
+    colour = "grey35",
+    linewidth = 0.35,
+    alpha = 0.45
+  ) +
+
+  # NZ boundaries drawn above predicted circles
+  # Keeps New Zealand visible behind the circles
+  geom_sf(
+    data = nz_nztm,
+    fill = NA,
+    colour = "grey45",
+    linewidth = 0.3
+  ) +
+
+  # Observed MMI at Felt RAPID cells
+  geom_sf(
+    data = eq_sf,
+    aes(fill = observed_mmi_category),
+    shape = 21,
+    colour = "black",
+    stroke = 0.2,
+    size = 1.5,
+    alpha = 0.95,
+    show.legend = FALSE
+  ) +
+
+  # Earthquake epicentre
+  geom_sf(
+    data = earthquake,
+    shape = 4,
+    size = 4,
+    stroke = 1.5
+  ) +
+
+  # North arrow
+  annotation_north_arrow(
+    location = "tr",
+    which_north = "true",
+    pad_x = unit(0.3, "in"),
+    pad_y = unit(0.3, "in"),
+    height = unit(0.8, "cm"),
+    width = unit(0.8, "cm"),
+    style = north_arrow_minimal
+  ) +
+  
+    # Scale bar
+  annotation_scale(
+    location = "br",
+    width_hint = 0.25,
+    unit_category = "metric",
+    style = "bar",
+    pad_x = unit(0.3, "in"),
+    pad_y = unit(0.3, "in"),
+    text_cex = 0.8,
+    line_width = 0.7
+  ) +
+
+  scale_fill_manual(
+    values = mmi_colours,
+    limits = as.character(3:8),
+    name = "MMI",
+    guide = guide_legend(reverse = TRUE)
+  ) +
+
+  labs(
+    title = "Observed and Predicted Earthquake Intensity",
+    subtitle = paste0(
+      "Earthquake: ", earthquake_id,
+      " | Mw: ", round(mw_value, 2),
+      " | Depth: ", round(depth, 1), " km"
+    ),
+    x = NULL,
+    y = NULL
+  ) +
+
+  # Focus map on New Zealand
+  coord_sf(
+    xlim = c(
+      nz_bbox["xmin"] - x_margin,
+      nz_bbox["xmax"] + x_margin
+    ),
+    ylim = c(
+      nz_bbox["ymin"] - y_margin,
+      nz_bbox["ymax"] + y_margin
+    ),
+    expand = FALSE,
+    datum = NA
+  ) +
+
+  theme_void() +
+
+  theme(
+    legend.position = "right",
+
+    plot.title = element_text(
+      face = "bold"
+    )
+  )
+
+# DISPLAY MAP
+mmi_map
+
+# Create earthquake_maps folder inside Project-Silvanus
+dir.create(
+  here("earthquake_maps"),
+  showWarnings = FALSE
+)
+
+# Save map
+ggsave(
+  filename = here(
+    "earthquake_maps",
+    paste0("MMI_map_", earthquake_id, ".png")
+  ),
+  plot = mmi_map,
+  width = 10,
+  height = 8,
+  units = "in",
+  dpi = 300
+)
+```
+```{r}
+data_sd |>
+  distinct(publicid, .keep_all = TRUE) |>
+  summarise(
+    mean_depth = mean(event_depth_km, na.rm = TRUE)
+  )
+```
+
+```{r}
+# MAP PREDICTED MMI FOR A HYPOTHETICAL EARTHQUAKE
+
+# Alpine fault
+# event_longitude <- 171
+# event_latitude <- -42.7
+# mw_value <- 8
+# depth <- 10
+
+# Hikurangi fault
+# event_longitude <- 177.2
+# event_latitude <- -40.5
+# mw_value <- 8.5
+# depth <- 15
+
+# HYPOTHETICAL EARTHQUAKE SETTINGS
+earthquake_name <- "Hypothetical Alpine Earthquake"
+
+event_longitude <- 171
+event_latitude <- -42.7
+mw_value <- 8
+depth <- 10
+
+# NEW ZEALAND MAP
+nz_nztm <- nzmap |>
+  st_transform(2193)
+
+# Remove Chatham Islands
+mainland_bbox <- st_bbox(
+  c(
+    xmin = 1000000,
+    ymin = 4700000,
+    xmax = 2100000,
+    ymax = 6300000
+  ),
+  crs = st_crs(2193)
+)
+
+nz_nztm <- st_crop(nz_nztm, mainland_bbox)
+
+nz_bbox <- st_bbox(nz_nztm)
+
+x_margin <- (nz_bbox["xmax"] - nz_bbox["xmin"]) * 0.20
+y_margin <- (nz_bbox["ymax"] - nz_bbox["ymin"]) * 0.10
+
+
+# CREATE HYPOTHETICAL EARTHQUAKE EPICENTRE
+earthquake <- tibble(
+  event_longitude = event_longitude,
+  event_latitude = event_latitude
+) |>
+  st_as_sf(
+    coords = c("event_longitude", "event_latitude"),
+    crs = 4326
+  ) |>
+  st_transform(2193)
+
+
+# MAXIMUM DISTANCE ACROSS NEW ZEALAND
+# Use all four corners so the prediction covers the map
+
+bbox_corners <- st_as_sf(
+  expand.grid(
+    x = c(nz_bbox["xmin"], nz_bbox["xmax"]),
+    y = c(nz_bbox["ymin"], nz_bbox["ymax"])
+  ),
+  coords = c("x", "y"),
+  crs = 2193
+)
+
+max_radius_km <- max(
+  as.numeric(
+    st_distance(
+      st_geometry(earthquake),
+      st_geometry(bbox_corners)
+    )
+  )
+) / 1000
+
+
+# HOLD VS30 CONSTANT
+# Use median Vs30 from the modelling dataset
+vs30_value <- median(
+  data_sd$Vs30_m_s,
+  na.rm = TRUE
+)
+
+
+# GENERATE EPICENTRAL DISTANCES
+prediction_data <- tibble(
+  Repi_km = seq(
+    from = 0.1,
+    to = max_radius_km,
+    by = 0.1
+  ),
+  event_depth_km = depth,
+  Mw = mw_value,
+  Vs30_m_s = vs30_value
+)
+
+
+prediction_data$predicted_mmi <- predict(
+  final_lm,
+  newdata = prediction_data
+)
+
+
+# CHECK PREDICTION RANGE
+print(
+  range(
+    prediction_data$predicted_mmi,
+    na.rm = TRUE
+  )
+)
+
+
+# FIND MMI CATEGORY BOUNDARIES
+mmi_boundaries <- seq(2.5, 7.5, by = 1)
+
+#prediction_range <- range(
+#  prediction_data$predicted_mmi,
+#  na.rm = TRUE
+#)
+#
+#mmi_boundaries <- mmi_boundaries[
+#  mmi_boundaries > prediction_range[1] &
+#    mmi_boundaries < prediction_range[2]
+#]
+
+
+# FIND EPICENTRAL DISTANCE OF EACH BOUNDARY
+ring_distances <- map_dfr(
+  mmi_boundaries,
+  function(boundary) {
+
+    closest <- prediction_data |>
+      slice_min(
+        abs(predicted_mmi - boundary),
+        n = 1,
+        with_ties = FALSE
+      )
+
+    tibble(
+      boundary = boundary,
+      Repi_km = closest$Repi_km,
+      predicted_mmi = closest$predicted_mmi
+    )
+  }
+)
+
+print(ring_distances)
+
+
+# CREATE MMI REGIONS
+# Assumes predicted MMI decreases with distance
+
+rings <- ring_distances |>
+  mutate(
+    radius_km = Repi_km,
+    mmi = ceiling(boundary)
+  ) |>
+  arrange(desc(radius_km))
+
+
+# CREATE CIRCLE GEOMETRIES
+ring_geometry <- lapply(
+  rings$radius_km,
+  function(radius) {
+    st_buffer(
+      st_geometry(earthquake),
+      dist = radius * 1000
+    )[[1]]
+  }
+)
+
+rings_sf <- st_sf(
+  boundary = rings$boundary,
+  radius_km = rings$radius_km,
+  mmi = factor(rings$mmi, levels = 3:8),
+  geometry = st_sfc(
+    ring_geometry,
+    crs = 2193
+  )
+)
+
+
+# MMI COLOURS
+mmi_colours <- c(
+  "3" = "#BFCCFF",
+  "4" = "#A0E6FF",
+  "5" = "#80F5A0",
+  "6" = "#FFFF00",
+  "7" = "#FFC800",
+  "8" = "#FF9100"
+)
+
+
+# CREATE MAP
+mmi_map <- ggplot() +
+
+  # Predicted MMI circles
+  geom_sf(
+    data = rings_sf,
+    aes(fill = mmi),
+    colour = "grey35",
+    linewidth = 0.35,
+    alpha = 0.55
+  ) +
+
+  # New Zealand map
+  geom_sf(
+    data = nz_nztm,
+    fill = NA,
+    colour = "grey45",
+    linewidth = 0.35
+  ) +
+
+  # Earthquake epicentre
+  geom_sf(
+    data = earthquake,
+    shape = 4,
+    size = 4,
+    stroke = 1.5,
+    colour = "black"
+  ) +
+
+  # North arrow
+  annotation_north_arrow(
+    location = "tr",
+    which_north = "true",
+    pad_x = unit(0.3, "in"),
+    pad_y = unit(0.3, "in"),
+    height = unit(0.8, "cm"),
+    width = unit(0.8, "cm"),
+    style = north_arrow_minimal
+  ) +
+
+  # Scale bar
+  annotation_scale(
+    location = "br",
+    width_hint = 0.25,
+    unit_category = "metric",
+    style = "bar",
+    pad_x = unit(0.3, "in"),
+    pad_y = unit(0.3, "in"),
+    text_cex = 0.8,
+    line_width = 0.7
+  ) +
+
+  scale_fill_manual(
+    values = mmi_colours,
+    limits = as.character(3:8),
+    name = "Predicted MMI",
+    guide = guide_legend(reverse = TRUE)
+  ) +
+
+  labs(
+    title = "Predicted Earthquake Intensity",
+    subtitle = paste0(
+      earthquake_name,
+      " | Mw: ", mw_value,
+      " | Depth: ", depth, " km"
+    ),
+    x = NULL,
+    y = NULL
+  ) +
+
+  coord_sf(
+    xlim = c(
+      nz_bbox["xmin"] - x_margin,
+      nz_bbox["xmax"] + x_margin
+    ),
+    ylim = c(
+      nz_bbox["ymin"] - y_margin,
+      nz_bbox["ymax"] + y_margin
+    ),
+    expand = FALSE,
+    datum = NA
+  ) +
+
+  theme_void() +
+
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+
+# DISPLAY MAP
+mmi_map
+
+
+# SAVE MAP
+dir.create(
+  here("earthquake_maps"),
+  showWarnings = FALSE
+)
+
+ggsave(
+  filename = here(
+    "earthquake_maps",
+    "MMI_hypothetical_earthquake.png"
+  ),
+  plot = mmi_map,
+  width = 10,
+  height = 8,
+  units = "in",
+  dpi = 300
+)
+```
